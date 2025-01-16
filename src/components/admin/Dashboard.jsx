@@ -27,7 +27,6 @@ const Dashboard = () => {
   ];
 
   const handleLogout = () => {
-    // Logique de déconnexion
     navigate('/');
   };
 
