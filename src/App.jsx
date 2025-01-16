@@ -6,12 +6,11 @@ import Participants from './components/admin/Participants';
 import Statistiques from './components/admin/Statistique';
 import Organisateur from './components/admin/Organisateur';
 
-// Import des composants client
 import Home from './components/client/Home';
 import Login from './components/client/Login';
 import SignUp from './components/client/SignUp';
 import Header from './components/client/Header';
-import ClientConferences from './components/client/Conferences'; // Renommé pour éviter les conflits
+import ClientConferences from './components/client/Conferences'; 
 import About from './components/client/About';
 import Contact from './components/client/Contact';
 import Footer from './components/client/Footer';
