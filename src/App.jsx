@@ -18,7 +18,6 @@ import Footer from './components/client/Footer';
 const App = () => {
   return (
       <Routes>
-        {/* Routes Client */}
         <Route path="/" element={
           <>
             <Header />
@@ -50,14 +49,12 @@ const App = () => {
           </>
         } />
 
-        {/* Routes Admin */}
         <Route path="/admin" element={<Dashboard />}>
           <Route index element={<Profile />} />
           <Route path="conferences" element={<Conferences />} />
           <Route path="participants" element={<Participants />} />
           <Route path="statistiques" element={<Statistiques />} />
           <Route path="organisateurs" element={<Organisateur />} />
-          {/* Redirection par défaut vers le profil */}
           <Route path="*" element={<Navigate to="/admin" replace />} />
         </Route>
       </Routes>
