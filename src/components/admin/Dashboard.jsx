@@ -3,6 +3,7 @@ import { Link, Outlet, useLocation, useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { FaUser, FaCalendarAlt, FaUsers, FaChartBar, FaUserTie, FaSignOutAlt, FaBars } from 'react-icons/fa';
 import AdminAvatar from '../../assets/react.svg';
+import Swal from 'sweetalert2';
 
 const Dashboard = () => {
   const location = useLocation();
@@ -27,8 +28,12 @@ const Dashboard = () => {
   ];
 
   const handleLogout = () => {
-    navigate('/');
+    localStorage.removeItem('access_token');
+    localStorage.removeItem('refresh_token');
+    navigate('/login');
+    Swal.fire('Administrateur Deconnecté avec succès', '', 'success');
   };
+
 
   return (
     <div className="flex h-screen bg-gray-100">

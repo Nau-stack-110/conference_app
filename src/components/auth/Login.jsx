@@ -1,28 +1,62 @@
 import { useState } from 'react';
 import { motion } from 'framer-motion';
-import ReCAPTCHA from 'react-google-recaptcha';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { FaEnvelope, FaLock, FaEye, FaEyeSlash } from 'react-icons/fa';
+import { loginUser } from './authUser';
+import  {jwtDecode}  from "jwt-decode";
+import Swal from "sweetalert2";
 
 const Login = () => {
   const [showPassword, setShowPassword] = useState(false);
-  const [isVerified, setIsVerified] = useState(false);
   const [formData, setFormData] = useState({
     email: '',
     password: '',
   });
+  const navigate = useNavigate();
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
-    if (!isVerified) {
-      alert('Veuillez vérifier que vous n\'êtes pas un robot');
-      return;
-    }
-    // Logique de connexion ici
-  };
+    try {
+      const response = await loginUser(formData);
+      const {access, refresh} = response.data;
+      
+      const decodedToken = jwtDecode(access);
+      console.log(decodedToken);
 
-  const handleRecaptcha = (value) => {
-    setIsVerified(!!value);
+      const isAdmin = decodedToken.is_superuser;
+      console.log("isAdmin:", isAdmin);
+
+      localStorage.setItem('access_token', access);
+      localStorage.setItem('refresh_token', refresh);
+      localStorage.setItem('isAdmin', isAdmin ? 'true' : 'false');  
+      Swal.fire({
+          title: 'Connexion réussie!!',
+          icon:'success',
+          toast:'true',
+          timer:'6000',
+          position:'top-right',
+          timerProgressBase:true,
+          showConfirmButton:false,
+        })
+
+      if (isAdmin) {
+          navigate('/admin'); 
+      }else{
+          navigate('/');
+          window.location.reload();
+      }
+    } catch (error) {
+      console.error('Erreur de connexion :', error.response.data);
+      Swal.fire({
+          title: 'Indentifiants incorrectes!!',
+          icon:'error',
+          toast:'true',
+          timer:'6000',
+          position:'top-right',
+          timerProgressBase:true,
+          showConfirmButton:false,
+        })
+    }
   };
 
   return (
@@ -100,13 +134,6 @@ const Login = () => {
             </div>
           </div>
 
-          <div className="flex justify-center">
-            <ReCAPTCHA
-              sitekey="VOTRE_CLE_SITE_RECAPTCHA"
-              onChange={handleRecaptcha}
-            />
-          </div>
-
           <div>
             <motion.button
               whileHover={{ scale: 1.02 }}
@@ -121,7 +148,7 @@ const Login = () => {
 
         <p className="mt-2 text-center text-sm text-gray-600">
           Pas encore de compte ?{' '}
-          <Link to="/signup" className="font-medium text-[#3498DB] hover:text-[#2980B9]">
+          <Link to="/register" className="font-medium text-[#3498DB] hover:text-[#2980B9]">
             S&apos;inscrire
           </Link>
         </p>

@@ -7,13 +7,15 @@ import Statistiques from './components/admin/Statistique';
 import Organisateur from './components/admin/Organisateur';
 
 import Home from './components/client/Home';
-import Login from './components/client/Login';
-import SignUp from './components/client/SignUp';
+import Login from './components/auth/Login';
+import Register from './components/auth/Register';
 import Header from './components/client/Header';
 import ClientConferences from './components/client/Conferences'; 
 import About from './components/client/About';
 import Contact from './components/client/Contact';
 import Footer from './components/client/Footer';
+import PrivateRoute from './components/privatedRoute';
+import AdminRoute from './components/adminRoute';
 
 const App = () => {
   return (
@@ -39,8 +41,8 @@ const App = () => {
             <Footer />
           </>
         } />
-        <Route path="/login" element={<Login />} />
-        <Route path="/signup" element={<SignUp />} />
+        <Route path="/login" element={ <> <Header /> <Login /> </>} />
+        <Route path="/register" element={ <> <Header /> <Register /> </>} />
         <Route path="/contact" element={
           <>
             <Header />
@@ -49,7 +51,7 @@ const App = () => {
           </>
         } />
 
-        <Route path="/admin" element={<Dashboard />}>
+        <Route path="/admin" element={<PrivateRoute> <AdminRoute> <Dashboard /> </AdminRoute> </PrivateRoute>}>
           <Route index element={<Profile />} />
           <Route path="conferences" element={<Conferences />} />
           <Route path="participants" element={<Participants />} />

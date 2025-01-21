@@ -1,7 +1,9 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { FaCalendar, FaMapMarkerAlt, FaSearch } from 'react-icons/fa';
+import { FaCalendar, FaSearch, FaMapMarkerAlt, FaFilter, FaLaptop, FaBook, FaTheaterMasks, FaBriefcase, FaUsers, FaArtstation } from 'react-icons/fa';
 import PropTypes from 'prop-types';
+import axios from 'axios';
+import { formatDate, formatTime } from './utils';
 
 const ConferenceCard = ({ conference }) => {
   const [showDetails, setShowDetails] = useState(false);
@@ -10,24 +12,28 @@ const ConferenceCard = ({ conference }) => {
     <motion.div
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
-      className="bg-white rounded-lg shadow-lg overflow-hidden"
+      className="bg-white rounded-lg shadow-lg overflow-hidden h-auto"
     >
       <div className="p-4">
         <h3 className="text-lg font-bold mb-2">{conference.title}</h3>
-        <div className="flex items-center text-gray-500 text-sm mb-2">
-          <FaCalendar className="mr-2" />
-          {conference.date}
-        </div>
-        <div className="flex items-center text-gray-500 text-sm">
-          <FaMapMarkerAlt className="mr-2" />
-          {conference.location}
+        <p className="text-gray-600 text-sm mb-3">{conference.description}</p>
+        
+        <div className='flex justify-between flex-wrap'>
+          <div className="flex items-center text-gray-500 text-sm mb-2">
+            <FaCalendar className="mr-2" />
+            {formatDate(conference.date)}
+          </div>
+          <div className="flex items-center text-gray-500 text-sm">
+            <FaMapMarkerAlt className="mr-2" />
+            {conference.lieu}
+          </div>
         </div>
 
         <motion.button
           whileHover={{ scale: 1.02 }}
           whileTap={{ scale: 0.98 }}
           onClick={() => setShowDetails(!showDetails)}
-          className="mt-4 text-[#3498DB] hover:text-[#2980B9] text-sm flex items-center"
+          className="mt-3 text-[#3498DB] hover:text-[#2980B9] text-sm flex items-center"
         >
           {showDetails ? 'Masquer les détails' : 'Voir les détails'}
         </motion.button>
@@ -38,26 +44,25 @@ const ConferenceCard = ({ conference }) => {
               initial={{ opacity: 0, height: 0 }}
               animate={{ opacity: 1, height: 'auto' }}
               exit={{ opacity: 0, height: 0 }}
-              className="mt-4 pt-4 border-t"
+              className="mt-3 pt-3 border-t"
             >
-              <p className="text-gray-600 text-sm mb-4">{conference.description}</p>
-              <div className="space-y-2">
-                <div className="text-sm">
-                  <span className="font-semibold">Prix:</span> {conference.price}
-                </div>
-                <div className="text-sm">
-                  <span className="font-semibold">Langue:</span> {conference.language}
-                </div>
-                <div className="mt-4">
-                  <h4 className="font-semibold text-sm mb-2">Programme:</h4>
-                  <div className="space-y-1">
-                    {conference.events.map((event, index) => (
-                      <div key={index} className="text-sm text-gray-600">
-                        {event.time} - {event.title}
-                      </div>
-                    ))}
+              <div className="space-y-2 text-sm">
+                {conference.sessions && conference.sessions.length > 0 ? (
+                  <div className="mt-2">
+                    <h4 className="font-semibold mb-1">Programme:</h4>
+                    <div className="space-y-1">
+                      {conference.sessions
+                        .sort((a, b) => new Date(`1970-01-01T${a.start_time}`) - new Date(`1970-01-01T${b.start_time}`))
+                        .map((event, index) => (
+                          <div key={index} className="text-gray-600">
+                            • {formatTime(event.start_time)} - {event.title}
+                          </div>
+                        ))}
+                    </div>
                   </div>
-                </div>
+                ) : (
+                  <div className="text-gray-500">Aucune session disponible.</div>
+                )}
               </div>
             </motion.div>
           )}
@@ -67,8 +72,9 @@ const ConferenceCard = ({ conference }) => {
           whileHover={{ scale: 1.02 }}
           whileTap={{ scale: 0.98 }}
           className="mt-4 w-full bg-[#3498DB] text-white py-2 rounded-lg hover:bg-[#2980B9] text-sm"
+          onClick={() => navigate('/login')}
         >
-          S&apos;inscrire
+          S&apos;inscrire à l&apos;événement
         </motion.button>
       </div>
     </motion.div>
@@ -79,69 +85,49 @@ ConferenceCard.propTypes = {
   conference: PropTypes.shape({
     title: PropTypes.string.isRequired,
     date: PropTypes.string.isRequired,
-    location: PropTypes.string.isRequired,
+    lieu: PropTypes.string.isRequired,
     description: PropTypes.string.isRequired,
     price: PropTypes.string.isRequired,
-    language: PropTypes.string.isRequired,
-    events: PropTypes.arrayOf(PropTypes.shape({
-      time: PropTypes.string.isRequired,
+    sessions: PropTypes.arrayOf(PropTypes.shape({
+      start_time: PropTypes.string.isRequired,
       title: PropTypes.string.isRequired
     })).isRequired
   }).isRequired
 };
+
+const categories = [
+  { id: 'all', label: 'Toutes', icon: <FaFilter /> },
+  { id: 'tech', label: 'Technologie', icon: <FaLaptop /> },
+  { id: 'education', label: 'Éducation', icon: <FaBook /> },
+  { id: 'culture', label: 'Culture', icon: <FaTheaterMasks /> },
+  { id: 'business', label: 'Business', icon: <FaBriefcase /> },
+  { id: 'others', label: 'Autres', icon: <FaUsers /> },
+  { id: 'arts', label: 'Arts', icon: <FaArtstation /> }
+];
 
 const Conferences = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [activeCategory, setActiveCategory] = useState('all');
   const [currentPage, setCurrentPage] = useState(1);
   const conferencesPerPage = 9;
-
-  const categories = [
-    { id: 'all', label: 'Toutes' },
-    { id: 'tech', label: 'Technologie' },
-    { id: 'education', label: 'Éducation' },
-    { id: 'culture', label: 'Culture' },
-    { id: 'business', label: 'Business' }
-  ];
-
-  const conferences = [
-    {
-      id: 1,
-      title: "Tech Innovation Madagascar 2024",
-      date: "15 Juin 2024",
-      location: "Carlton Anosy, Antananarivo",
-      category: "tech",
-      description: "Découvrez les innovations technologiques à Madagascar",
-      price: "Gratuit",
-      language: "Français/Malagasy",
-      events: [
-        { time: "08:00", title: "Accueil des participants" },
-        { time: "09:00", title: "Ouverture officielle" },
-        { time: "10:00", title: "Conférence principale" }
-      ]
-    },
-    {
-      id: 2,
-      title: "Forum de l'Éducation Numérique",
-      date: "20 Juillet 2024",
-      location: "EMIT Vontovorona",
-      category: "education",
-      description: "L'avenir de l'éducation numérique à Madagascar",
-      price: "50 000 Ar",
-      language: "Malagasy",
-      events: [
-        { time: "09:00", title: "Présentation des projets" },
-        { time: "14:00", title: "Ateliers pratiques" }
-      ]
-    }
-    // Ajoutez d'autres conférences...
-  ];
-
-  const [filteredConferences, setFilteredConferences] = useState(conferences);
+  const [conferences, setConferences] = useState([]);
 
   useEffect(() => {
+    const fetchConferences = async () => {
+      try {
+        const response = await axios.get('http://127.0.0.1:8000/api/conferences/');
+        setConferences(response.data);
+      } catch (error) {
+        console.error('Erreur lors de la récupération des conférences:', error);
+      }
+    };
+
+    fetchConferences();
+  }, []);
+
+  const filteredConferences = useMemo(() => {
     let filtered = conferences;
-    
+
     if (searchTerm) {
       filtered = filtered.filter(conf => 
         conf.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -153,14 +139,8 @@ const Conferences = () => {
       filtered = filtered.filter(conf => conf.category === activeCategory);
     }
 
-    setFilteredConferences(filtered);
-    setCurrentPage(1);
-  }, [searchTerm, activeCategory]);
-
-  // Pagination
-  const indexOfLastConference = currentPage * conferencesPerPage;
-  const indexOfFirstConference = indexOfLastConference - conferencesPerPage;
-  const currentConferences = filteredConferences.slice(indexOfFirstConference, indexOfLastConference);
+    return filtered.sort((a, b) => new Date(b.date) - new Date(a.date));
+  }, [searchTerm, activeCategory, conferences]);
 
   return (
     <div className="min-h-screen pt-20 bg-gray-50">
@@ -190,23 +170,24 @@ const Conferences = () => {
           {categories.map((cat) => (
             <motion.button
               key={cat.id}
-              whileHover={{ scale: 1.05 }}
+              whileHover={{ scale: 1.05, boxShadow: "0px 0px 10px rgba(0, 0, 0, 0.2)" }}
               whileTap={{ scale: 0.95 }}
               onClick={() => setActiveCategory(cat.id)}
-              className={`px-6 py-2 rounded-full ${
+              className={`flex items-center px-6 py-2 rounded-full transition duration-300 ease-in-out ${
                 activeCategory === cat.id
-                  ? 'bg-[#3498DB] text-white'
+                  ? 'bg-[#3498DB] text-white shadow-lg'
                   : 'bg-white text-gray-600 hover:bg-gray-100'
               }`}
             >
-              {cat.label}
+              {cat.icon}
+              <span className="ml-2">{cat.label}</span>
             </motion.button>
           ))}
         </div>
 
         {/* Liste des conférences */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-          {currentConferences.map((conference) => (
+          {filteredConferences.slice((currentPage - 1) * conferencesPerPage, currentPage * conferencesPerPage).map((conference) => (
             <ConferenceCard key={conference.id} conference={conference} />
           ))}
         </div>

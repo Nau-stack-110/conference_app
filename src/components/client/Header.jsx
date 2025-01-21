@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { FaBars, FaTimes, FaUser } from 'react-icons/fa';
+import useAuth from "./useAuth";
 
 const Header = () => {
   const navigate = useNavigate();
@@ -9,6 +10,8 @@ const Header = () => {
   const [isScrolled, setIsScrolled] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [showAuthModal, setShowAuthModal] = useState(false);
+  const { isAuthenticated, handleLogout } = useAuth();
+
 
   useEffect(() => {
     const handleScroll = () => {
@@ -69,7 +72,7 @@ const Header = () => {
                   className="px-4 py-2 text-[#3498DB] hover:text-[#2980B9]"
                 >
                   <FaUser className="inline-block mr-2" />
-                  Compte
+                  {isAuthenticated ? 'Bonjour, ' : 'Compte'}
                 </motion.button>
 
                 <AnimatePresence>
@@ -94,7 +97,7 @@ const Header = () => {
                         whileHover={{ backgroundColor: "#f3f4f6" }}
                         className="px-4 py-2 cursor-pointer"
                         onClick={() => {
-                          navigate('/signup');
+                          navigate('/register');
                           setShowAuthModal(false);
                         }}
                       >
@@ -104,6 +107,14 @@ const Header = () => {
                   )}
                 </AnimatePresence>
               </motion.div>
+              {isAuthenticated && (
+                <button
+                  onClick={handleLogout}
+                  className="text-[#3498DB] hover:text-[#2980B9]"
+                >
+                  Déconnexion
+                </button>
+              )}
             </div>
 
             {/* Bouton Menu Mobile */}
@@ -146,17 +157,19 @@ const Header = () => {
                   }}
                   className="w-full py-2 text-[#3498DB] border-2 border-[#3498DB] rounded-lg hover:bg-[#3498DB] hover:text-white transition-colors"
                 >
-                  Se connecter
+                  {isAuthenticated ? 'Déconnexion' : 'Se connecter'}
                 </button>
-                <button
-                  onClick={() => {
-                    navigate('/signup');
-                    setIsMobileMenuOpen(false);
-                  }}
-                  className="w-full py-2 bg-[#3498DB] text-white rounded-lg hover:bg-[#2980B9] transition-colors"
-                >
-                  S&apos;inscrire
-                </button>
+                {!isAuthenticated && (
+                  <button
+                    onClick={() => {
+                      navigate('/register');
+                      setIsMobileMenuOpen(false);
+                    }}
+                    className="w-full py-2 bg-[#3498DB] text-white rounded-lg hover:bg-[#2980B9] transition-colors"
+                  >
+                    S&apos;inscrire
+                  </button>
+                )}
               </div>
             </div>
           </motion.div>

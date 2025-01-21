@@ -1,56 +1,39 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { FaComment, FaTimes, FaStar, FaCalendar, FaMapMarkerAlt, FaUsers, FaClock, FaChevronDown, FaChevronUp } from 'react-icons/fa';
 import { Swiper, SwiperSlide } from 'swiper/react';
 import { Navigation, Pagination, Autoplay, EffectFade } from 'swiper/modules';
-import Linux from '../../assets/Linux.png';
-import QuestionMark from '../../assets/question-mark-query-information-support-service-graphic.jpg';
 import 'swiper/css';
 import 'swiper/css/navigation';
 import 'swiper/css/pagination';
 import 'swiper/css/effect-fade';
+import axios from 'axios';
+import React from 'react';
 
 const Home = () => {
   const navigate = useNavigate();
   const [showFeedback, setShowFeedback] = useState(false);
   const [rating, setRating] = useState(0);
   const [activeCategory, setActiveCategory] = useState('all');
-  const [conferences] = useState([
-    {
-      id: 1,
-      title: "Tech Summit 2024",
-      image: Linux,
-      date: "15-16 Juin 2024",
-      description: "Le plus grand événement tech de l'année",
-      category: "Tech",
-      location: "Paris Expo",
-      participants: 1200,
-      duration: "2 jours"
-    },
-    {
-      id: 2,
-      title: "Business Innovation Forum",
-      image: QuestionMark,
-      date: "20-21 Juillet 2024",
-      description: "Découvrez les dernières innovations business",
-      category: "Business",
-      location: "Lyon Convention Center",
-      participants: 800,
-      duration: "2 jours"
-    },
-  ]);
+  const [conferences, setConferences] = useState([]);
 
-  const categories = ['all', 'Tech', 'Business', 'Science', 'Arts'];
-  const [filteredConferences, setFilteredConferences] = useState(conferences);
+  const categories = ['all', 'Education', 'Technologies', 'Science', 'Culture', 'Arts', 'Business', 'Autres'];
+  const [filteredConferences, setFilteredConferences] = useState([]);
 
   useEffect(() => {
-    if (activeCategory === 'all') {
-      setFilteredConferences(conferences);
-    } else {
-      setFilteredConferences(conferences.filter(conf => conf.category === activeCategory));
-    }
-  }, [activeCategory, conferences]);
+    const fetchConferences = async () => {
+      try {
+        const response = await axios.get('http://127.0.0.1:8000/api/conferences/');
+        setConferences(response.data);
+        setFilteredConferences(response.data);
+      } catch (error) {
+        console.error('Erreur lors de la récupération des conférences:', error);
+      }
+    };
+
+    fetchConferences();
+  }, []);
 
   const [currentPage, setCurrentPage] = useState(1);
   const [conferencesPerPage] = useState(6);
@@ -58,10 +41,11 @@ const Home = () => {
 
   const indexOfLastConference = currentPage * conferencesPerPage;
   const indexOfFirstConference = indexOfLastConference - conferencesPerPage;
-  const currentConferences = filteredConferences.slice(
-    indexOfFirstConference,
-    indexOfLastConference
-  );
+  const currentConferences = useMemo(() => {
+    return filteredConferences
+      .filter(conference => activeCategory === 'all' || conference.category === activeCategory)
+      .slice(indexOfFirstConference, indexOfLastConference);
+  }, [filteredConferences, activeCategory, indexOfFirstConference, indexOfLastConference]);
 
   const sortConferences = (conferences, type) => {
     if (type === 'date') {
@@ -70,8 +54,18 @@ const Home = () => {
     return [...conferences].sort((a, b) => b.participants - a.participants);
   };
 
+  const formatDate = (dateString) => {
+    const options = { year: 'numeric', month: 'long', day: '2-digit' };
+    return new Date(dateString).toLocaleDateString('fr-FR', options);
+  };
+
+  const formatTime = (timeString) => {
+    const options = { hour: '2-digit', minute: '2-digit', hour12: false };
+    return new Date(`${timeString}`).toLocaleTimeString('fr-FR', options);
+  };
+
   // eslint-disable-next-line react/prop-types
-  const ConferenceCard = ({ conference }) => {
+  const ConferenceCard = React.memo(({ conference }) => {
     const [showDetails, setShowDetails] = useState(false);
 
     return (
@@ -84,19 +78,21 @@ const Home = () => {
         <img
           src={conference.image}
           alt={conference.title}
-          className="w-full h-40 object-cover"
+          className="w-full h-32 object-cover"
         />
         <div className="p-4">
           <h3 className="text-lg font-bold mb-2">{conference.title}</h3>
           <p className="text-gray-600 text-sm mb-3">{conference.description}</p>
           
-          <div className="flex items-center text-gray-500 text-sm mb-2">
-            <FaCalendar className="mr-2" />
-            {conference.date}
-          </div>
-          <div className="flex items-center text-gray-500 text-sm">
-            <FaMapMarkerAlt className="mr-2" />
-            {conference.location}
+          <div className='flex justify-between flex-wrap'>
+            <div className="flex items-center text-gray-500 text-sm mb-2">
+              <FaCalendar className="mr-2" />
+              {formatDate(conference.date)}
+            </div>
+            <div className="flex items-center text-gray-500 text-sm">
+              <FaMapMarkerAlt className="mr-2" />
+              {conference.lieu}
+            </div>
           </div>
 
           <motion.button
@@ -127,23 +123,23 @@ const Home = () => {
                 <div className="space-y-2 text-sm">
                   <div className="flex items-center text-gray-500">
                     <FaUsers className="mr-2" />
-                    {conference.participants} participants
+                    {conference.total_participants} participants
                   </div>
-                  <div className="flex items-center text-gray-500">
-                    <FaClock className="mr-2" />
-                    {conference.duration}
-                  </div>
-                  {conference.events && (
+                  {conference.sessions && conference.sessions.length > 0 ? (
                     <div className="mt-2">
                       <h4 className="font-semibold mb-1">Programme:</h4>
                       <div className="space-y-1">
-                        {conference.events.map((event, index) => (
-                          <div key={index} className="text-gray-600">
-                            • {event.time} - {event.title}
-                          </div>
-                        ))}
+                        {conference.sessions
+                          .sort((a, b) => new Date(`1970-01-01T${a.start_time}`) - new Date(`1970-01-01T${b.start_time}`))
+                          .map((event, index) => (
+                            <div key={index} className="text-gray-600">
+                              • {formatTime(event.start_time)} - {event.title}
+                            </div>
+                          ))}
                       </div>
                     </div>
+                  ) : (
+                    <div className="text-gray-500">Aucune session disponible.</div>
                   )}
                 </div>
               </motion.div>
@@ -161,7 +157,7 @@ const Home = () => {
         </div>
       </motion.div>
     );
-  };
+  });
 
   return (
     <div className="min-h-screen">
@@ -179,7 +175,7 @@ const Home = () => {
           autoplay={{ delay: 5000 }}
           className="h-full"
         >
-          {conferences.map((conference) => (
+          {conferences.slice(0, 6).map((conference) => (
             <SwiperSlide key={conference.id}>
               <div className="relative h-full">
                 <img
@@ -196,7 +192,7 @@ const Home = () => {
                     <h1 className="text-4xl md:text-6xl font-bold mb-4">
                       {conference.title}
                     </h1>
-                    <p className="text-xl mb-6">{conference.date}</p>
+                    <p className="text-xl mb-6">{formatDate(conference.date)}</p>
                     <div className="flex justify-center gap-4">
                       <motion.button
                         whileHover={{ scale: 1.05 }}
@@ -209,7 +205,7 @@ const Home = () => {
                       <motion.button
                         whileHover={{ scale: 1.05 }}
                         whileTap={{ scale: 0.95 }}
-                        onClick={() => navigate('/signup')}
+                        onClick={() => navigate('/register')}
                         className="bg-white text-[#3498DB] px-8 py-3 rounded-lg"
                       >
                         S&apos;inscrire

@@ -1,29 +1,28 @@
 import { useState } from 'react';
 import { motion } from 'framer-motion';
-import ReCAPTCHA from 'react-google-recaptcha';
-import { Link } from 'react-router-dom';
-import { FaUser, FaEnvelope, FaLock, FaEye, FaEyeSlash, FaPhone } from 'react-icons/fa';
+import { Link, useNavigate } from 'react-router-dom';
+import { registerUser } from './authUser'; 
+import Swal from 'sweetalert2';
+import { FaUser, FaEnvelope, FaLock, FaEye, FaEyeSlash } from 'react-icons/fa';
 
-const SignUp = () => {
+const Register = () => {
   const [showPassword, setShowPassword] = useState(false);
-  const [isVerified, setIsVerified] = useState(false);
   const [formData, setFormData] = useState({
-    nom: '',
+    username: '',
     email: '',
-    telephone: '',
     password: '',
-    confirmPassword: ''
+    password2: ''
   });
   const [errors, setErrors] = useState({});
+  const navigate = useNavigate();
 
   const validateForm = () => {
     const newErrors = {};
-    if (!formData.nom) newErrors.nom = 'Le nom est requis';
+    if (!formData.username) newErrors.username = 'Le nom est requis';
     if (!formData.email) newErrors.email = 'L\'email est requis';
-    if (!formData.telephone) newErrors.telephone = 'Le téléphone est requis';
     if (!formData.password) newErrors.password = 'Le mot de passe est requis';
-    if (formData.password !== formData.confirmPassword) {
-      newErrors.confirmPassword = 'Les mots de passe ne correspondent pas';
+    if (formData.password !== formData.password2) {
+      newErrors.password2 = 'Les mots de passe ne correspondent pas';
     }
     if (formData.password.length < 8) {
       newErrors.password = 'Le mot de passe doit contenir au moins 8 caractères';
@@ -32,20 +31,35 @@ const SignUp = () => {
     return Object.keys(newErrors).length === 0;
   };
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
-    if (!isVerified) {
-      alert('Veuillez vérifier que vous n\'êtes pas un robot');
-      return;
-    }
     if (validateForm()) {
-      // Logique d'inscription ici
-      console.log('Form submitted:', formData);
+      try {
+        const response = await registerUser(formData);
+        console.log('Utilisateur inscrit avec succès :', response.data);
+        Swal.fire({
+          title: 'Inscription réussie!! \n Veuillez connecter maintenant',
+          icon:'success',
+          toast:'true',
+          timer:'6000',
+          position:'top-right',
+          timerProgressBase:true,
+          showConfirmButton:false,
+        })
+        navigate('/login');
+      } catch (error) {
+        console.error('Erreur d\'inscription :', error.response.data);
+        Swal.fire({
+          title: 'Echec d\'inscription!!',
+          icon:'error',
+          toast:'true',
+          timer:'6000',
+          position:'top-right',
+          timerProgressBase:true,
+          showConfirmButton:false,
+        })
+      }
     }
-  };
-
-  const handleRecaptcha = (value) => {
-    setIsVerified(!!value);
   };
 
   return (
@@ -63,19 +77,19 @@ const SignUp = () => {
 
         <form className="mt-8 space-y-6" onSubmit={handleSubmit}>
           <div className="rounded-md shadow-sm space-y-4">
-            {/* Nom complet */}
+            {/* Nom d'utilisateur */}
             <div className="relative">
               <FaUser className="absolute top-3 left-3 text-gray-400" />
               <input
                 type="text"
-                name="nom"
+                name="username"
                 required
                 className={`appearance-none rounded-lg relative block w-full px-10 py-2 border ${
-                  errors.nom ? 'border-red-500' : 'border-gray-300'
+                  errors.username ? 'border-red-500' : 'border-gray-300'
                 } placeholder-gray-500 text-gray-900 focus:outline-none focus:ring-[#3498DB] focus:border-[#3498DB]`}
-                placeholder="Nom complet"
-                value={formData.nom}
-                onChange={(e) => setFormData({ ...formData, nom: e.target.value })}
+                placeholder="Nom d'utilisateur"
+                value={formData.username}
+                onChange={(e) => setFormData({ ...formData, username: e.target.value })}
               />
               {errors.nom && (
                 <motion.p
@@ -83,7 +97,7 @@ const SignUp = () => {
                   animate={{ opacity: 1 }}
                   className="text-red-500 text-xs mt-1"
                 >
-                  {errors.nom}
+                  {errors.username}
                 </motion.p>
               )}
             </div>
@@ -104,25 +118,6 @@ const SignUp = () => {
               />
               {errors.email && (
                 <motion.p className="text-red-500 text-xs mt-1">{errors.email}</motion.p>
-              )}
-            </div>
-
-            {/* Téléphone */}
-            <div className="relative">
-              <FaPhone className="absolute top-3 left-3 text-gray-400" />
-              <input
-                type="tel"
-                name="telephone"
-                required
-                className={`appearance-none rounded-lg relative block w-full px-10 py-2 border ${
-                  errors.telephone ? 'border-red-500' : 'border-gray-300'
-                } placeholder-gray-500 text-gray-900 focus:outline-none focus:ring-[#3498DB] focus:border-[#3498DB]`}
-                placeholder="Numéro de téléphone"
-                value={formData.telephone}
-                onChange={(e) => setFormData({ ...formData, telephone: e.target.value })}
-              />
-              {errors.telephone && (
-                <motion.p className="text-red-500 text-xs mt-1">{errors.telephone}</motion.p>
               )}
             </div>
 
@@ -152,33 +147,24 @@ const SignUp = () => {
               )}
             </div>
 
-            {/* Confirmer mot de passe */}
             <div className="relative">
               <FaLock className="absolute top-3 left-3 text-gray-400" />
               <input
                 type={showPassword ? 'text' : 'password'}
-                name="confirmPassword"
+                name="password2"
                 required
                 className={`appearance-none rounded-lg relative block w-full px-10 py-2 border ${
-                  errors.confirmPassword ? 'border-red-500' : 'border-gray-300'
+                  errors.password2 ? 'border-red-500' : 'border-gray-300'
                 } placeholder-gray-500 text-gray-900 focus:outline-none focus:ring-[#3498DB] focus:border-[#3498DB]`}
                 placeholder="Confirmer le mot de passe"
-                value={formData.confirmPassword}
-                onChange={(e) => setFormData({ ...formData, confirmPassword: e.target.value })}
+                value={formData.password2}
+                onChange={(e) => setFormData({ ...formData, password2: e.target.value })}
               />
-              {errors.confirmPassword && (
-                <motion.p className="text-red-500 text-xs mt-1">{errors.confirmPassword}</motion.p>
+              {errors.password2 && (
+                <motion.p className="text-red-500 text-xs mt-1">{errors.password2}</motion.p>
               )}
             </div>
           </div>
-
-          <div className="flex justify-center">
-            <ReCAPTCHA
-              sitekey="VOTRE_CLE_SITE_RECAPTCHA"
-              onChange={handleRecaptcha}
-            />
-          </div>
-
           <div>
             <motion.button
               whileHover={{ scale: 1.02 }}
@@ -202,4 +188,4 @@ const SignUp = () => {
   );
 };
 
-export default SignUp; 
+export default Register; 
