@@ -55,12 +55,8 @@ const About = () => {
           <h2 className="text-3xl font-bold text-center mb-12">Notre Mission</h2>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
             {missions.map((mission, index) => (
-              <motion.div
+              <div
                 key={index}
-                initial={{ opacity: 0, y: 20 }}
-                whileInView={{ opacity: 1, y: 0 }}
-                viewport={{ once: true }}
-                transition={{ delay: index * 0.1 }}
                 className="text-center p-6 bg-white rounded-lg shadow-lg"
               >
                 <div className="text-4xl text-[#3498DB] mb-4 flex justify-center">
@@ -68,7 +64,7 @@ const About = () => {
                 </div>
                 <h3 className="text-xl font-semibold mb-3">{mission.title}</h3>
                 <p className="text-gray-600">{mission.description}</p>
-              </motion.div>
+              </div>
             ))}
           </div>
         </div>

@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { FaPlus, FaEdit, FaTrash, FaEye, FaSearch, FaFilter } from 'react-icons/fa';
 import { motion, AnimatePresence } from 'framer-motion';
+import axios from 'axios';
 
 const Conference = () => {
   const [showModal, setShowModal] = useState(false);
@@ -9,43 +10,29 @@ const Conference = () => {
   const [filterCategory, setFilterCategory] = useState('all');
   const [showFilters, setShowFilters] = useState(false);
 
-  const categories = ['Tech', 'Business', 'Science', 'Arts', 'Autres'];
+  const categories = ['Technologies', 'Education', 'Business', 'Science', 'Cultures', 'Arts', 'Autres'];
 
-  const [conferences, setConferences] = useState([
-    {
-      id: 1,
-      titre: "Tech Summit 2024",
-      date: "2024-06-15",
-      lieu: "Paris Expo",
-      description: "Summit sur les nouvelles technologies",
-      categorie: "Tech",
-      evenements: [
-        { id: 1, nom: "Keynote d'ouverture", heure: "09:00" },
-        { id: 2, nom: "Workshop IA", heure: "14:00" },
-      ]
-    },
-    {
-        id: 2,
-        titre: "Tech INFO 2025",
-        date: "2025-01-15",
-        lieu: "Paris Expo",
-        evenements: [
-          { nom: "Keynote d'ouverture", heure: "09:00" },
-          { nom: "Workshop IA", heure: "14:00" },
-        ]
-      },
-    // Ajoutez d'autres conférences ici
-  ]);
+  const [conferences, setConferences] = useState([]);
+
+  const getConferences =  async () =>{
+    try {
+      const response = await axios.get("http://127.0.0.1:8000/api/conferences/");
+      setConferences(response.data);
+    } catch (e) {
+      console.error("Erreur lors du chargement des conferences:", e);
+    }
+  }
 
   const [filteredConferences, setFilteredConferences] = useState(conferences);
 
   useEffect(() => {
+    getConferences();
     let filtered = conferences;
     
     // Filtre par recherche
     if (searchTerm) {
       filtered = filtered.filter(conference =>
-        conference.titre.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        conference.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
         conference.lieu.toLowerCase().includes(searchTerm.toLowerCase()) ||
         conference.description.toLowerCase().includes(searchTerm.toLowerCase())
       );
@@ -53,7 +40,7 @@ const Conference = () => {
 
     // Filtre par catégorie
     if (filterCategory !== 'all') {
-      filtered = filtered.filter(conference => conference.categorie === filterCategory);
+      filtered = filtered.filter(conference => conference.category === filterCategory);
     }
 
     setFilteredConferences(filtered);
@@ -64,12 +51,13 @@ const Conference = () => {
     const formData = new FormData(e.target);
     const newConference = {
       id: editingConference?.id || Date.now(),
-      titre: formData.get('titre'),
+      title: formData.get('titre'),
       date: formData.get('date'),
       lieu: formData.get('lieu'),
+      price:formData.get('price'),
       description: formData.get('description'),
-      categorie: formData.get('categorie'),
-      evenements: editingConference?.evenements || []
+      category: formData.get('category'),
+      sessions: editingConference?.sessions || []
     };
 
     if (editingConference) {
@@ -180,11 +168,14 @@ const Conference = () => {
               whileHover={{ y: -5 }}
               className="bg-white p-6 rounded-lg shadow-md"
             >
-              <h3 className="text-xl font-semibold mb-4">{conference.titre}</h3>
+              <h3 className="text-xl font-semibold mb-4">{conference.title}</h3>
               <div className="space-y-2">
+                <div className='flex flex-wrap justify-between'>
                 <p><strong>Date:</strong> {conference.date}</p>
+                <p><strong>Price:</strong><span className='text-blue-500'> {conference.price}</span> </p>
+                </div>
                 <p><strong>Lieu:</strong> {conference.lieu}</p>
-                <p><strong>Catégorie:</strong> {conference.categorie}</p>
+                <p><strong>Catégorie:</strong> {conference.category}</p>
               </div>
               <div className="mt-4 flex justify-end space-x-2">
                 <motion.button
@@ -238,8 +229,8 @@ const Conference = () => {
                   <label className="block text-sm font-medium mb-1">Titre</label>
                   <input
                     type="text"
-                    name="titre"
-                    defaultValue={editingConference?.titre}
+                    name="title"
+                    defaultValue={editingConference?.title}
                     className="w-full p-2 border rounded-lg"
                     required
                   />
@@ -277,8 +268,8 @@ const Conference = () => {
                 <div>
                   <label className="block text-sm font-medium mb-1">Catégorie</label>
                   <select
-                    name="categorie"
-                    defaultValue={editingConference?.categorie}
+                    name="category"
+                    defaultValue={editingConference?.category}
                     className="w-full p-2 border rounded-lg"
                     required
                   >

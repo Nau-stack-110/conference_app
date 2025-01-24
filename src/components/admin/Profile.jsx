@@ -138,7 +138,7 @@ const Profile = () => {
 
                 <div>
                   <label className="block text-sm font-medium mb-2">
-                    Date d'inscription
+                    Date d&apos;inscription
                   </label>
                   <p className="text-gray-600">{profileData.dateInscription}</p>
                 </div>

@@ -55,7 +55,6 @@ const Register = () => {
           toast:'true',
           timer:'6000',
           position:'top-right',
-          timerProgressBase:true,
           showConfirmButton:false,
         })
       }

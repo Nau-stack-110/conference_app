@@ -16,6 +16,7 @@ import Contact from './components/client/Contact';
 import Footer from './components/client/Footer';
 import PrivateRoute from './components/privatedRoute';
 import AdminRoute from './components/adminRoute';
+import MyTickets from './components/client/MyTickets';
 
 const App = () => {
   return (
@@ -41,6 +42,7 @@ const App = () => {
             <Footer />
           </>
         } />
+        <Route path="/my-tickets" element={<> <Header/> <MyTickets/> </>}></Route>
         <Route path="/login" element={ <> <Header /> <Login /> </>} />
         <Route path="/register" element={ <> <Header /> <Register /> </>} />
         <Route path="/contact" element={

@@ -3,6 +3,7 @@ import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { FaBars, FaTimes, FaUser } from 'react-icons/fa';
 import useAuth from "./useAuth";
+import { jwtDecode } from 'jwt-decode';
 
 const Header = () => {
   const navigate = useNavigate();
@@ -11,14 +12,20 @@ const Header = () => {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [showAuthModal, setShowAuthModal] = useState(false);
   const { isAuthenticated, handleLogout } = useAuth();
-
+  const [userInfo, setuserInfo] = useState(null);
 
   useEffect(() => {
+    const token = localStorage.getItem('access_token');
+    if (token) {
+        const decoded = jwtDecode(token);
+        setuserInfo(decoded);
+    }
     const handleScroll = () => {
       setIsScrolled(window.scrollY > 20);
     };
     window.addEventListener('scroll', handleScroll);
     return () => window.removeEventListener('scroll', handleScroll);
+
   }, []);
 
   const navItems = [
@@ -39,7 +46,7 @@ const Header = () => {
       >
         <div className="container mx-auto px-4">
           <div className="flex items-center justify-between h-20">
-            <Link to="/" className="text-2xl font-bold text-[#2C3E50]">
+            <Link to="/" className={`${isScrolled ? 'text-blue-600' : 'text-white'} text-2xl font-bold`}>
               Conference4Tous
             </Link>
 
@@ -49,7 +56,7 @@ const Header = () => {
                 <Link
                   key={item.path}
                   to={item.path}
-                  className={`text-[#2C3E50] hover:text-[#3498DB] transition-colors ${
+                  className={`${isScrolled ? 'text-blue-600' : 'text-gray-300'} hover:text-[#3498DB] transition-colors ${
                     location.pathname === item.path ? 'font-semibold text-[#3498DB]' : ''
                   }`}
                 >
@@ -69,10 +76,10 @@ const Header = () => {
                   whileHover={{ scale: 1.05 }}
                   whileTap={{ scale: 0.95 }}
                   onClick={() => setShowAuthModal(!showAuthModal)}
-                  className="px-4 py-2 text-[#3498DB] hover:text-[#2980B9]"
+                  className="px-4 py-2 text-[#3975b1] hover:text-[#2980B9]"
                 >
                   <FaUser className="inline-block mr-2" />
-                  {isAuthenticated ? 'Bonjour, ' : 'Compte'}
+                  {isAuthenticated && userInfo && userInfo.is_superuser === false ? userInfo.username : 'Compte'}
                 </motion.button>
 
                 <AnimatePresence>
@@ -83,38 +90,57 @@ const Header = () => {
                       exit={{ opacity: 0, y: -10 }}
                       className="absolute right-0 mt-2 w-48 bg-white rounded-lg shadow-xl py-2"
                     >
-                      <motion.div
-                        whileHover={{ backgroundColor: "#f3f4f6" }}
-                        className="px-4 py-2 cursor-pointer"
-                        onClick={() => {
-                          navigate('/login');
-                          setShowAuthModal(false);
-                        }}
-                      >
-                        Se connecter
-                      </motion.div>
-                      <motion.div
-                        whileHover={{ backgroundColor: "#f3f4f6" }}
-                        className="px-4 py-2 cursor-pointer"
-                        onClick={() => {
-                          navigate('/register');
-                          setShowAuthModal(false);
-                        }}
-                      >
-                        S&apos;inscrire
-                      </motion.div>
+                      {isAuthenticated ? (
+                        <>
+                          <motion.div
+                            whileHover={{ backgroundColor: "#f3f4f6" }}
+                            className="px-4 py-2 cursor-pointer"
+                            onClick={() => {
+                              navigate('/my-tickets');
+                              setShowAuthModal(false);
+                            }}
+                          >
+                            Mes tickets
+                          </motion.div>
+                          <motion.div
+                            whileHover={{ backgroundColor: "#f3f4f6" }}
+                            className="px-4 py-2 cursor-pointer"
+                            onClick={() => {
+                              handleLogout();
+                              setShowAuthModal(false);
+                            }}
+                          >
+                            Déconnexion
+                          </motion.div>
+                        </>
+                      ) : (
+                        <>
+                          <motion.div
+                            whileHover={{ backgroundColor: "#f3f4f6" }}
+                            className="px-4 py-2 cursor-pointer"
+                            onClick={() => {
+                              navigate('/login');
+                              setShowAuthModal(false);
+                            }}
+                          >
+                            Se connecter
+                          </motion.div>
+                          <motion.div
+                            whileHover={{ backgroundColor: "#f3f4f6" }}
+                            className="px-4 py-2 cursor-pointer"
+                            onClick={() => {
+                              navigate('/register');
+                              setShowAuthModal(false);
+                            }}
+                          >
+                            S&apos;inscrire
+                          </motion.div>
+                        </>
+                      )}
                     </motion.div>
                   )}
                 </AnimatePresence>
               </motion.div>
-              {isAuthenticated && (
-                <button
-                  onClick={handleLogout}
-                  className="text-[#3498DB] hover:text-[#2980B9]"
-                >
-                  Déconnexion
-                </button>
-              )}
             </div>
 
             {/* Bouton Menu Mobile */}
@@ -150,24 +176,26 @@ const Header = () => {
                   </Link>
                 ))}
                 <hr className="border-gray-200" />
-                <button
-                  onClick={() => {
-                    navigate('/login');
-                    setIsMobileMenuOpen(false);
-                  }}
-                  className="w-full py-2 text-[#3498DB] border-2 border-[#3498DB] rounded-lg hover:bg-[#3498DB] hover:text-white transition-colors"
-                >
-                  {isAuthenticated ? 'Déconnexion' : 'Se connecter'}
-                </button>
+                {isAuthenticated && (
+                  <button
+                    onClick={() => {
+                      navigate('/my-tickets');
+                      setIsMobileMenuOpen(false);
+                    }}
+                    className="w-full py-2 text-[#3498DB] border-2 border-[#3498DB] rounded-lg hover:bg-[#3498DB] hover:text-white transition-colors"
+                  >
+                    Mes tickets
+                  </button>
+                )}
                 {!isAuthenticated && (
                   <button
                     onClick={() => {
-                      navigate('/register');
+                      navigate('/login');
                       setIsMobileMenuOpen(false);
                     }}
                     className="w-full py-2 bg-[#3498DB] text-white rounded-lg hover:bg-[#2980B9] transition-colors"
                   >
-                    S&apos;inscrire
+                    Se connecter
                   </button>
                 )}
               </div>

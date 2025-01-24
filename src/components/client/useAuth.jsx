@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
+import Swal from "sweetalert2";
 
 const useAuth = () => {
     const navigate = useNavigate();
@@ -16,8 +17,16 @@ const useAuth = () => {
         localStorage.removeItem('isAdmin');
         setIsAuthenticated(false);
         navigate('/'); 
-    };
 
+        // Affichage du message de déconnexion réussie avec SweetAlert2
+        Swal.fire({
+            title: 'Déconnexion réussie!',
+            text: 'Vous avez été déconnecté avec succès.',
+            icon: 'success',
+            confirmButtonText: 'OK'
+        });
+    };
+    
     return {isAuthenticated, handleLogout};
 };
 

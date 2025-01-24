@@ -10,6 +10,7 @@ import 'swiper/css/pagination';
 import 'swiper/css/effect-fade';
 import axios from 'axios';
 import React from 'react';
+import Swal from 'sweetalert2';
 
 const Home = () => {
   const navigate = useNavigate();
@@ -17,9 +18,12 @@ const Home = () => {
   const [rating, setRating] = useState(0);
   const [activeCategory, setActiveCategory] = useState('all');
   const [conferences, setConferences] = useState([]);
+  const [filteredConferences, setFilteredConferences] = useState([]);
+  const [qrcodeUrl, setQrcodeUrl] = useState('');
+  const [totalParticipants, setTotalParticipants] = useState(0);
+ 
 
   const categories = ['all', 'Education', 'Technologies', 'Science', 'Culture', 'Arts', 'Business', 'Autres'];
-  const [filteredConferences, setFilteredConferences] = useState([]);
 
   useEffect(() => {
     const fetchConferences = async () => {
@@ -51,7 +55,7 @@ const Home = () => {
     if (type === 'date') {
       return [...conferences].sort((a, b) => new Date(b.date) - new Date(a.date));
     }
-    return [...conferences].sort((a, b) => b.participants - a.participants);
+    return [...conferences].sort((a, b) => b.total_participants - a.total_participants);
   };
 
   const formatDate = (dateString) => {
@@ -64,11 +68,58 @@ const Home = () => {
     return new Date(`${timeString}`).toLocaleTimeString('fr-FR', options);
   };
 
+  const handleRegister = async (conferenceId) => {
+    try {
+      const token = localStorage.getItem('access_token');
+      const response = await axios.post('http://127.0.0.1:8000/api/register-conference/', {
+        conference_id: conferenceId,
+      }, {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
+      
+      Swal.fire({
+        title: 'Inscription réussie!',
+        text: `Votre ticket est disponible ici: ${response.data.ticket_url}`,
+        icon: 'success',
+        confirmButtonText: 'OK'
+      });
+
+      setTotalParticipants(prev => prev + 1);
+      setQrcodeUrl(response.data.ticket_url);
+      
+      setConferences(prevConferences => 
+        prevConferences.map(conference => 
+          conference.id === conferenceId 
+            ? { ...conference, total_participants: conference.total_participants + 1 } 
+            : conference
+        )
+      );
+
+    } catch (error) {
+      console.error('Erreur lors de l\'inscription:', error);
+      let errorMessage = 'Erreur lors de l\'inscription. Veuillez réessayer.';
+      if (error.response && error.response.data) {
+        errorMessage = error.response.data.error || errorMessage;
+      }
+      
+      Swal.fire({
+        title: 'Erreur!',
+        text: errorMessage,
+        icon: 'error',
+        confirmButtonText: 'OK'
+      });
+      
+    }
+  };
+
+
   // eslint-disable-next-line react/prop-types
-  const ConferenceCard = React.memo(({ conference }) => {
+  const ConferenceCard = React.memo(({ conference, onRegister }) => {
     const [showDetails, setShowDetails] = useState(false);
 
-    return (
+    return ( 
       <motion.div
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
@@ -150,7 +201,7 @@ const Home = () => {
             whileHover={{ scale: 1.02 }}
             whileTap={{ scale: 0.98 }}
             className="mt-4 w-full bg-[#3498DB] text-white py-2 rounded-lg hover:bg-[#2980B9] text-sm"
-            onClick={() => navigate('/login')}
+            onClick={onRegister}
           >
             S&apos;inscrire à l&apos;événement
           </motion.button>
@@ -283,7 +334,7 @@ const Home = () => {
           </h2>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             {sortConferences(currentConferences, sortBy).map((conference) => (
-              <ConferenceCard key={conference.id} conference={conference} />
+              <ConferenceCard key={conference.id} conference={conference} onRegister={() => handleRegister(conference.id)} />
             ))}
           </div>
 
@@ -445,6 +496,19 @@ const Home = () => {
           </motion.div>
         )}
       </AnimatePresence>
+
+      {/* Afficher le QR code après l'inscription */}
+      {qrcodeUrl && (
+        <div className="mt-4 text-center">
+          <h3 className="text-lg font-bold">Votre QR Code :</h3>
+          <img src={qrcodeUrl} alt="QR Code" className="mx-auto my-2" />
+          <a href={qrcodeUrl} download className="mt-2 inline-block bg-[#3498DB] text-white px-4 py-2 rounded-lg">
+            Télécharger le QR Code
+          </a>
+          <p className="mt-2">Total des participants : {totalParticipants}</p>
+        </div>
+      )}
+
     </div>
   );
 };
