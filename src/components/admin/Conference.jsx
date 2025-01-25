@@ -38,7 +38,6 @@ const Conference = () => {
       );
     }
 
-    // Filtre par catégorie
     if (filterCategory !== 'all') {
       filtered = filtered.filter(conference => conference.category === filterCategory);
     }

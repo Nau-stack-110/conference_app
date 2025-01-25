@@ -1,20 +1,62 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { FaUser, FaEnvelope, FaPhone, FaEdit, FaCamera } from 'react-icons/fa';
-import AdminAvatar from '../../assets/react.svg'; // Assurez-vous d'avoir une image par défaut
+import AdminAvatar from '../../assets/react.svg';
+import axios from 'axios';
+import { jwtDecode } from 'jwt-decode';
 
 const Profile = () => {
   const [isEditing, setIsEditing] = useState(false);
   const [profileData, setProfileData] = useState({
-    nom: 'Admin User',
-    email: 'admin@conference4tous.mg',
-    telephone: '+261 34 00 000 00',
-    role: 'Administrateur',
-    dateInscription: '01/01/2024',
-    bio: 'Gestionnaire principal de la plateforme Conference4Tous.',
-    image: AdminAvatar
+    nom: '',
+    email: '',
+    telephone: '',
+    role: '',
+    dateInscription: '',
+    bio: '',
+    image: ''
   });
 
+  useEffect(() => {
+    const fetchProfileData = async () => {
+      const token = localStorage.getItem('access_token');
+      if (token) {
+        const decoded = jwtDecode(token);
+        console.log('Decoded Token:', decoded);
+        setProfileData(decoded);
+        try {
+          const { data } = await axios.get('http://localhost:8000/api/user-profile/');
+          console.log('API Response Data:', data);
+          const userId = decoded.user_id;
+          const userData = data.find(user => user.id === userId);
+          if (userData) {
+            const dateInscription = new Date(userData.profile.created_at);
+            setProfileData(prev => ({
+              ...prev,
+              nom: userData.profile.fullname || 'Admin User',
+              email: userData.email,
+              telephone: userData.profile.telephone || '+261 34 00 976 78',
+              role: userData.is_superuser ? 'Administrateur' : 'Utilisateur',
+              dateInscription: dateInscription.toLocaleDateString('fr-FR', {
+                day: 'numeric',
+                month: 'long',
+                year: 'numeric'
+              }),
+              bio: userData.profile.bio || 'Aucune bio.',
+              image: userData.profile.image || AdminAvatar
+            }));
+          } else {
+            console.error('Aucun utilisateur correspondant trouvé dans la réponse de l\'API.');
+          }
+        } catch (error) {
+          console.error('Erreur lors de la récupération des données du profil:', error);
+        }
+      }
+    };
+
+    fetchProfileData();
+  }, []); 
+  
   const handleImageChange = (e) => {
     const file = e.target.files[0];
     if (file) {

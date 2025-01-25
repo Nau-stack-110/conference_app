@@ -50,16 +50,18 @@ const Statistique = () => {
   // };
   const categories = ['Technologies', 'Education', 'Business', 'Science', 'Cultures', 'Arts', 'Autres'];
   
-  const categoryData = categories.map((cat)=> ({
-    cat, count:conferences.filter((conf)=> conf.category === cat).length,
+  const categoryData = categories.map((cat) => ({
+    cat,
+    count: conferences.filter((conf) => conf.category === cat).length,
   }));
+
   console.log(categoryData);
 
   const pieData = {
     labels: categories,
     datasets: [
       {
-        data: categoryData.map((item)=> item.count),
+        data: categoryData.map((item) => item.count),
         backgroundColor: [
           '#3498DB',
           '#bb7924',
@@ -67,7 +69,7 @@ const Statistique = () => {
           '#63c73c',
           '#1ABC9C',
           '#6d2f2f',
-          '#c73cb0'
+          '#c73cb0',
         ],
       },
     ],

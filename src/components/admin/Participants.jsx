@@ -3,6 +3,9 @@ import { FaSearch, FaFilter, FaUserPlus, FaEdit, FaTrash, FaDownload } from 'rea
 import { motion, AnimatePresence } from 'framer-motion';
 import jsPDF from 'jspdf';
 import 'jspdf-autotable';
+import axios from 'axios';
+
+const categorie = ['Technologies', 'Education', 'Business', 'Science', 'Cultures', 'Arts', 'Autres'];
 
 const Participants = () => {
   const [showModal, setShowModal] = useState(false);
@@ -10,30 +13,30 @@ const Participants = () => {
   const [editingParticipant, setEditingParticipant] = useState(null);
   const [filterStatus, setFilterStatus] = useState('all');
   const [showFilters, setShowFilters] = useState(false);
-  const [currentPage, setCurrentPage] = useState(1);
+  const [currentPage, setCurrentPage] = useState();
   const itemsPerPage = 5;
+  const [participants, setParticipants] = useState([]);
 
-  const [participants, setParticipants] = useState([
-    {
-      id: 1,
-      nom: 'Martin Dupont',
-      email: 'martin.dupont@email.com',
-      telephone: '+33 6 12 34 56 78',
-      conference: 'Tech Summit 2024',
-      statut: 'Confirmé',
-    },
-    {
-      id: 2,
-      nom: 'Sophie Martin',
-      email: 'sophie.martin@email.com',
-      telephone: '+33 6 98 76 54 32',
-      conference: 'Digital Innovation Forum',
-      statut: 'En attente',
-    },
-    // ... autres participants
-  ]);
+  const getParticipants = async () =>{
+    try {
+      const token = localStorage.getItem('access_token');
+      const response = await axios.get("http://127.0.0.1:8000/api/registrations/",{
+        headers: {
+          Authorization: `Bearer ${token}`,
+        }
+    });
+      setParticipants(response.data);
+      setCurrentPage(1);
+    } catch (e) {
+      console.error("Erreur lors du chargement des participants:", e);
+    }
+  }
 
-  const [filteredParticipants, setFilteredParticipants] = useState(participants);
+  const [filteredParticipants, setFilteredParticipants] = useState([]);
+
+  useEffect(() => {
+    getParticipants();
+  }, []);
 
   useEffect(() => {
     let filtered = participants;
@@ -41,20 +44,22 @@ const Participants = () => {
     // Filtre par recherche
     if (searchTerm) {
       filtered = filtered.filter(participant =>
-        participant.nom.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        participant.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        participant.conference.toLowerCase().includes(searchTerm.toLowerCase())
+        participant.user.username.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        participant.user.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        participant.session.conference.title.toLowerCase().includes(searchTerm.toLowerCase())
       );
     }
 
-    // Filtre par statut
-    if (filterStatus !== 'all') {
-      filtered = filtered.filter(participant => participant.statut === filterStatus);
+    // Filtre par catégorie
+    if (filterStatus && filterStatus !== 'all') {
+      filtered = filtered.filter(participant => 
+        participant.session.conference.category === filterStatus
+      );
     }
 
     setFilteredParticipants(filtered);
-    setCurrentPage(1); // Reset to first page when filtering
-  }, [searchTerm, filterStatus, participants]);
+    setCurrentPage(1);
+  }, [searchTerm, participants, filterStatus]);
 
   // Pagination
   const pageCount = Math.ceil(filteredParticipants.length / itemsPerPage);
@@ -70,9 +75,8 @@ const Participants = () => {
       id: editingParticipant?.id || Date.now(),
       nom: formData.get('nom'),
       email: formData.get('email'),
-      telephone: formData.get('telephone'),
       conference: formData.get('conference'),
-      statut: formData.get('statut')
+      // statut: formData.get('statut')
     };
 
     if (editingParticipant) {
@@ -110,17 +114,15 @@ const Participants = () => {
 
     // Préparer les données pour le tableau
     const tableData = filteredParticipants.map(participant => [
-      participant.nom,
-      participant.email,
-      participant.telephone,
-      participant.conference,
-      participant.statut
+      participant.user.username,
+      participant.user.email,
+      participant.session.conference,
     ]);
 
     // Créer le tableau
     doc.autoTable({
       startY: 40,
-      head: [['Nom', 'Email', 'Téléphone', 'Conférence', 'Statut']],
+      head: [['Nom', 'Email', 'Conférence']],
       body: tableData,
       theme: 'striped',
       headStyles: {
@@ -135,6 +137,45 @@ const Participants = () => {
 
     // Sauvegarder le PDF
     doc.save('liste-participants.pdf');
+  };
+
+  const handlePageChange = (page) => {
+    if (page >= 1 && page <= pageCount) {
+      setCurrentPage(page);
+    }
+  };
+
+  const getCategoryColor = (category) => {
+    switch (category) {
+      case 'Technologies':
+        return 'bg-blue-100 text-blue-800';
+      case 'Education':
+        return 'bg-green-100 text-green-800';
+      case 'Business':
+        return 'bg-yellow-100 text-yellow-800';
+      case 'Science':
+        return 'bg-purple-100 text-purple-800';
+      case 'Cultures':
+        return 'bg-red-100 text-red-800';
+      case 'Arts':
+        return 'bg-pink-100 text-pink-800';
+      case 'Autres':
+        return 'bg-gray-100 text-gray-800';
+      default:
+        return '';
+    }
+  };
+
+  const getParticipantColor = (participant) => {
+    // Vous pouvez personnaliser les couleurs ici selon vos besoins
+    return participant.session.conference.category === 'Technologies' ? 'bg-blue-100 text-blue-800' :
+           participant.session.conference.category === 'Education' ? 'bg-green-100 text-green-800' :
+           participant.session.conference.category === 'Business' ? 'bg-yellow-100 text-yellow-800' :
+           participant.session.conference.category === 'Science' ? 'bg-purple-100 text-purple-800' :
+           participant.session.conference.category === 'Cultures' ? 'bg-red-100 text-red-800' :
+           participant.session.conference.category === 'Arts' ? 'bg-pink-100 text-pink-800' :
+           participant.session.conference.category === 'Autres' ? 'bg-gray-100 text-gray-800' :
+           '';
   };
 
   return (
@@ -189,17 +230,17 @@ const Participants = () => {
                     filterStatus === 'all' ? 'bg-[#3498DB] text-white' : 'hover:bg-gray-100'
                   }`}
                 >
-                  Tous les statuts
+                  Toutes les catégories
                 </button>
-                {['Confirmé', 'En attente', 'Annulé'].map(status => (
+                {categorie.map(cat => (
                   <button
-                    key={status}
-                    onClick={() => setFilterStatus(status)}
+                    key={cat}
+                    onClick={() => setFilterStatus(cat)}
                     className={`w-full text-left px-3 py-2 rounded-lg ${
-                      filterStatus === status ? 'bg-[#3498DB] text-white' : 'hover:bg-gray-100'
+                      filterStatus === cat ? 'bg-[#3498DB] text-white' : 'hover:bg-gray-100'
                     }`}
                   >
-                    {status}
+                    {cat}
                   </button>
                 ))}
               </div>
@@ -218,9 +259,8 @@ const Participants = () => {
             <tr>
               <th className="px-6 py-3 text-left">Nom</th>
               <th className="px-6 py-3 text-left">Email</th>
-              <th className="px-6 py-3 text-left">Téléphone</th>
               <th className="px-6 py-3 text-left">Conférence</th>
-              <th className="px-6 py-3 text-left">Statut</th>
+              <th className="px-6 py-3 text-left">Date</th>
               <th className="px-6 py-3 text-left">Actions</th>
             </tr>
           </thead>
@@ -232,17 +272,14 @@ const Participants = () => {
                 animate={{ opacity: 1 }}
                 className="hover:bg-gray-50"
               >
-                <td className="px-6 py-4">{participant.nom}</td>
-                <td className="px-6 py-4">{participant.email}</td>
-                <td className="px-6 py-4">{participant.telephone}</td>
-                <td className="px-6 py-4">{participant.conference}</td>
-                <td className="px-6 py-4">
-                  <span className={`px-2 py-1 rounded-full text-sm ${
-                    participant.statut === 'Confirmé' ? 'bg-green-100 text-green-800' :
-                    participant.statut === 'En attente' ? 'bg-yellow-100 text-yellow-800' :
-                    'bg-red-100 text-red-800'
-                  }`}>
-                    {participant.statut}
+                <td className={`px-6 py-4 ${getParticipantColor(participant)}`}>{participant.user.username}</td>
+                <td className={`px-6 py-4 ${getParticipantColor(participant)}`}>{participant.user.email}</td>
+                <td className={`px-6 py-4 ${getCategoryColor(participant.session.conference.category)}`}>
+                  {participant.session.conference.title}
+                </td>
+                 <td className="px-6 py-4">
+                  <span className={`px-2 py-1 rounded-full text-sm ${getCategoryColor(participant.session.conference.category)}`} >
+                    {participant.session.conference.date}
                   </span>
                 </td>
                 <td className="px-6 py-4">
@@ -277,7 +314,7 @@ const Participants = () => {
               key={i}
               whileHover={{ scale: 1.1 }}
               whileTap={{ scale: 0.9 }}
-              onClick={() => setCurrentPage(i + 1)}
+              onClick={() => handlePageChange(i + 1)}
               className={`px-3 py-1 rounded ${
                 currentPage === i + 1 
                   ? 'bg-[#3498DB] text-white' 
@@ -314,7 +351,7 @@ const Participants = () => {
                   <input
                     type="text"
                     name="nom"
-                    defaultValue={editingParticipant?.nom}
+                    defaultValue={editingParticipant?.username}
                     className="w-full p-2 border rounded-lg"
                     required
                   />
@@ -330,16 +367,6 @@ const Participants = () => {
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium mb-1">Téléphone</label>
-                  <input
-                    type="tel"
-                    name="telephone"
-                    defaultValue={editingParticipant?.telephone}
-                    className="w-full p-2 border rounded-lg"
-                    required
-                  />
-                </div>
-                <div>
                   <label className="block text-sm font-medium mb-1">Conférence</label>
                   <input
                     type="text"
@@ -349,19 +376,7 @@ const Participants = () => {
                     required
                   />
                 </div>
-                <div>
-                  <label className="block text-sm font-medium mb-1">Statut</label>
-                  <select
-                    name="statut"
-                    defaultValue={editingParticipant?.statut}
-                    className="w-full p-2 border rounded-lg"
-                    required
-                  >
-                    <option value="Confirmé">Confirmé</option>
-                    <option value="En attente">En attente</option>
-                    <option value="Annulé">Annulé</option>
-                  </select>
-                </div>
+  
                 <div className="flex justify-end space-x-3">
                   <button
                     type="button"

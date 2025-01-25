@@ -4,10 +4,11 @@ import { FaCalendar, FaSearch, FaMapMarkerAlt, FaFilter, FaLaptop, FaBook, FaThe
 import PropTypes from 'prop-types';
 import axios from 'axios';
 import { formatDate, formatTime } from './utils';
+import { useNavigate } from 'react-router-dom';
 
 const ConferenceCard = ({ conference }) => {
   const [showDetails, setShowDetails] = useState(false);
-
+  const navigate = useNavigate()
   return (
     <motion.div
       initial={{ opacity: 0, y: 20 }}
