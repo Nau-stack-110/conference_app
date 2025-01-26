@@ -45,7 +45,7 @@ const Conference = () => {
     setFilteredConferences(filtered);
   }, [searchTerm, filterCategory, conferences]);
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
     const formData = new FormData(e.target);
     const newConference = {
@@ -60,11 +60,33 @@ const Conference = () => {
     };
 
     if (editingConference) {
-      setConferences(conferences.map(conf => 
-        conf.id === editingConference.id ? newConference : conf
-      ));
+      const token = localStorage.getItem("access_token");
+      await axios.put(`http://127.0.0.1:8000/api/conferences/${editingConference.id}/update/`,formData, {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        }
+      });
+    setConferences(conferences.map(conf => 
+      conf.id === editingConference.id ? newConference : conf));
+        Swal.fire({
+          title: 'Conférences mise à jour avec success',
+          icon:'success',
+          confirmButtonText: 'OK'
+        })
     } else {
+      const token = localStorage.getItem("access_token");
+      await axios.post("http://127.0.0.1:8000/api/conferences/create/", formData, {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        }
+      });
       setConferences([...conferences, newConference]);
+      console.log(formData);
+      Swal.fire({
+        title: 'Conférences crée avec success',
+        icon:'success',
+        confirmButtonText: 'OK'
+      })
     }
     setShowModal(false);
     setEditingConference(null);
@@ -92,6 +114,11 @@ const Conference = () => {
         })
       } catch (e) {
         console.error("Erreur lors de la suppression du conference:", e);
+        Swal.fire({
+          title: e,
+          icon:'error',
+          confirmButtonText: 'OK'
+        })
       }
     }
   };
@@ -128,6 +155,9 @@ const Conference = () => {
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
           />
+          <span className="absolute right-3 top-1/2 transform -translate-y-1/2 text-sm text-gray-500">
+          {filteredConferences.length} résultat(s)
+          </span>
         </div>
         <div className="relative">
           <motion.button
