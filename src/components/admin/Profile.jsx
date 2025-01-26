@@ -33,7 +33,7 @@ const Profile = () => {
             const dateInscription = new Date(userData.profile.created_at);
             setProfileData(prev => ({
               ...prev,
-              nom: userData.profile.fullname || 'Admin User',
+              nom: userData.username || 'Admin User',
               email: userData.email,
               telephone: userData.profile.telephone || '+261 34 00 976 78',
               role: userData.is_superuser ? 'Administrateur' : 'Utilisateur',

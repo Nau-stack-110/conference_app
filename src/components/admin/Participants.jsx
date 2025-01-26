@@ -56,7 +56,6 @@ const Participants = () => {
         participant.session.conference.category === filterStatus
       );
     }
-
     setFilteredParticipants(filtered);
     setCurrentPage(1);
   }, [searchTerm, participants, filterStatus]);
@@ -76,7 +75,6 @@ const Participants = () => {
       nom: formData.get('nom'),
       email: formData.get('email'),
       conference: formData.get('conference'),
-      // statut: formData.get('statut')
     };
 
     if (editingParticipant) {

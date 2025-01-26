@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { FaPlus, FaEdit, FaTrash, FaEye, FaSearch, FaFilter } from 'react-icons/fa';
 import { motion, AnimatePresence } from 'framer-motion';
 import axios from 'axios';
+import Swal from 'sweetalert2';
 
 const Conference = () => {
   const [showModal, setShowModal] = useState(false);
@@ -10,7 +11,7 @@ const Conference = () => {
   const [filterCategory, setFilterCategory] = useState('all');
   const [showFilters, setShowFilters] = useState(false);
 
-  const categories = ['Technologies', 'Education', 'Business', 'Science', 'Cultures', 'Arts', 'Autres'];
+  const categories = ['Technologies', 'Education', 'Business', 'Science', 'Culture', 'Arts', 'Autres'];
 
   const [conferences, setConferences] = useState([]);
 
@@ -29,7 +30,6 @@ const Conference = () => {
     getConferences();
     let filtered = conferences;
     
-    // Filtre par recherche
     if (searchTerm) {
       filtered = filtered.filter(conference =>
         conference.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -50,7 +50,7 @@ const Conference = () => {
     const formData = new FormData(e.target);
     const newConference = {
       id: editingConference?.id || Date.now(),
-      title: formData.get('titre'),
+      title: formData.get('title'),
       date: formData.get('date'),
       lieu: formData.get('lieu'),
       price:formData.get('price'),
@@ -75,9 +75,24 @@ const Conference = () => {
     setShowModal(true);
   };
 
-  const handleDelete = (id) => {
+  const handleDelete = async (id) => {
     if (window.confirm('Êtes-vous sûr de vouloir supprimer cette conférence ?')) {
-      setConferences(conferences.filter(conf => conf.id !== id));
+      try {
+        const token = localStorage.getItem('access_token');
+        await axios.delete(`http://127.0.0.1:8000/api/conferences/${id}/update/`,{
+          headers: {
+            Authorization: `Bearer ${token}`,
+          }
+      });
+        setConferences(conferences.filter(conf => conf.id !== id));
+        Swal.fire({
+          title: 'Conférence supprimer avec success',
+          icon:'success',
+          confirmButtonText: 'OK'
+        })
+      } catch (e) {
+        console.error("Erreur lors de la suppression du conference:", e);
+      }
     }
   };
 
