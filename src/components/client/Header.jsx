@@ -41,13 +41,13 @@ const Header = () => {
         initial={{ y: -100 }}
         animate={{ y: 0 }}
         className={`fixed w-full z-50 transition-all duration-300 ${
-          isScrolled ? 'bg-white shadow-lg' : 'bg-transparent backdrop-blur-sm'
+          isScrolled ? 'bg-gradient-to-r from-[#2C3E50] to-[#3498DB] shadow-xl' : 'bg-white/90 backdrop-blur-md'
         }`}
       >
         <div className="container mx-auto px-4">
           <div className="flex items-center justify-between h-20">
-            <Link to="/" className={`${isScrolled ? 'text-blue-600' : 'text-white'} text-2xl font-bold`}>
-              Conference4Tous
+            <Link to="/" className={`text-2xl font-bold ${isScrolled ? 'text-white' : 'text-[#2C3E50]'}`}>
+              <span className="bg-[#3498DB] text-white px-2 py-1 rounded">Conf</span>érence4Tous
             </Link>
 
             {/* Navigation Desktop */}
@@ -56,8 +56,12 @@ const Header = () => {
                 <Link
                   key={item.path}
                   to={item.path}
-                  className={`${isScrolled ? 'text-blue-600' : 'text-gray-300'} hover:text-[#3498DB] transition-colors ${
-                    location.pathname === item.path ? 'font-semibold text-[#3498DB]' : ''
+                  className={`flex items-center px-3 py-2 rounded-lg transition-all ${
+                    location.pathname === item.path 
+                      ? 'bg-[#3498DB] text-white' 
+                      : isScrolled 
+                        ? 'text-white hover:bg-white/20' 
+                        : 'text-[#2C3E50] hover:bg-gray-100'
                   }`}
                 >
                   {item.label}
@@ -65,7 +69,6 @@ const Header = () => {
               ))}
             </nav>
 
-            {/* Menu Auth Desktop */}
             <div className="hidden md:flex items-center space-x-2">
               <motion.div
                 initial={false}
@@ -76,10 +79,14 @@ const Header = () => {
                   whileHover={{ scale: 1.05 }}
                   whileTap={{ scale: 0.95 }}
                   onClick={() => setShowAuthModal(!showAuthModal)}
-                  className="px-4 py-2 text-[#3975b1] hover:text-[#2980B9]"
+                  className={`flex items-center space-x-2 ${
+                    isScrolled ? 'text-white' : 'text-[#2C3E50]'
+                  }`}
                 >
-                  <FaUser className="inline-block mr-2" />
-                  {isAuthenticated && userInfo && userInfo.is_superuser === false ? userInfo.username : 'Compte'}
+                  <FaUser className="text-xl" />
+                  {isAuthenticated && userInfo && (
+                    <span className="hidden sm:block">{userInfo.username}</span>
+                  )}
                 </motion.button>
 
                 <AnimatePresence>

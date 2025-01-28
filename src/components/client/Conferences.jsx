@@ -1,6 +1,6 @@
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { FaCalendar, FaSearch, FaMapMarkerAlt, FaFilter, FaLaptop, FaBook, FaTheaterMasks, FaBriefcase, FaUsers, FaArtstation } from 'react-icons/fa';
+import { FaCalendar, FaSearch, FaMapMarkerAlt } from 'react-icons/fa';
 import PropTypes from 'prop-types';
 import axios from 'axios';
 import { formatDate, formatTime } from './utils';
@@ -73,7 +73,14 @@ const ConferenceCard = ({ conference }) => {
           whileHover={{ scale: 1.02 }}
           whileTap={{ scale: 0.98 }}
           className="mt-4 w-full bg-[#3498DB] text-white py-2 rounded-lg hover:bg-[#2980B9] text-sm"
-          onClick={() => navigate('/login')}
+          onClick={() => {
+            const token = localStorage.getItem('access_token');
+            if (!token) {
+              navigate('/login');
+            } else {
+              onRegister(conference.id);
+            }
+          }}
         >
           S&apos;inscrire à l&apos;événement
         </motion.button>
@@ -96,28 +103,32 @@ ConferenceCard.propTypes = {
   }).isRequired
 };
 
-const categories = [
-  { id: 'all', label: 'Toutes', icon: <FaFilter /> },
-  { id: 'tech', label: 'Technologie', icon: <FaLaptop /> },
-  { id: 'education', label: 'Éducation', icon: <FaBook /> },
-  { id: 'culture', label: 'Culture', icon: <FaTheaterMasks /> },
-  { id: 'business', label: 'Business', icon: <FaBriefcase /> },
-  { id: 'others', label: 'Autres', icon: <FaUsers /> },
-  { id: 'arts', label: 'Arts', icon: <FaArtstation /> }
-];
-
 const Conferences = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [activeCategory, setActiveCategory] = useState('all');
   const [currentPage, setCurrentPage] = useState(1);
-  const conferencesPerPage = 9;
   const [conferences, setConferences] = useState([]);
+  const [filteredConferences, setFilteredConferences] = useState([]);
+  const [sortBy, setSortBy] = useState('date');
+  const conferencesPerPage = 9;
+
+  const categories = [
+    { id: 'all', label: 'Toutes' },
+    { id: 'Education', label: 'Éducation' },
+    { id: 'Technologies', label: 'Technologies' },
+    { id: 'Science', label: 'Science' },
+    { id: 'Culture', label: 'Culture' },
+    { id: 'Arts', label: 'Arts' },
+    { id: 'Business', label: 'Business' },
+    { id: 'Autres', label: 'Autres' }
+  ];
 
   useEffect(() => {
     const fetchConferences = async () => {
       try {
         const response = await axios.get('http://127.0.0.1:8000/api/conferences/');
         setConferences(response.data);
+        setFilteredConferences(response.data);
       } catch (error) {
         console.error('Erreur lors de la récupération des conférences:', error);
       }
@@ -126,22 +137,31 @@ const Conferences = () => {
     fetchConferences();
   }, []);
 
-  const filteredConferences = useMemo(() => {
+  const sortConferences = (conferences, type) => {
+    if (type === 'date') {
+      return [...conferences].sort((a, b) => new Date(b.date) - new Date(a.date));
+    }
+    return [...conferences].sort((a, b) => b.total_participants - a.total_participants);
+  };
+
+  useEffect(() => {
     let filtered = conferences;
 
     if (searchTerm) {
       filtered = filtered.filter(conf => 
         conf.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        conf.description.toLowerCase().includes(searchTerm.toLowerCase())
+        conf.description.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        conf.lieu.toLowerCase().includes(searchTerm.toLowerCase())
       );
     }
 
     if (activeCategory !== 'all') {
-      filtered = filtered.filter(conf => conf.category === activeCategory);
+      filtered = filtered.filter(conf => conf.category?.toLowerCase() === activeCategory.toLowerCase());
     }
 
-    return filtered.sort((a, b) => new Date(b.date) - new Date(a.date));
-  }, [searchTerm, activeCategory, conferences]);
+    setFilteredConferences(sortConferences(filtered, sortBy));
+    setCurrentPage(1); // Reset à la première page après filtrage
+  }, [searchTerm, activeCategory, conferences, sortBy]);
 
   return (
     <div className="min-h-screen pt-20 bg-gray-50">
@@ -165,6 +185,40 @@ const Conferences = () => {
         </div>
       </div>
 
+      {/* Section Tri et Filtres */}
+      <section className="bg-gray-50">
+        <div className="container mx-auto px-4">
+          <div className="flex flex-wrap justify-between items-center gap-4">
+            <div className="flex space-x-4">
+              <motion.button
+                whileHover={{ scale: 1.05 }}
+                whileTap={{ scale: 0.95 }}
+                onClick={() => setSortBy('date')}
+                className={`px-6 py-2 rounded-full ${
+                  sortBy === 'date'
+                    ? 'bg-[#3498DB] text-white'
+                    : 'bg-white text-gray-600'
+                }`}
+              >
+                Plus récentes
+              </motion.button>
+              <motion.button
+                whileHover={{ scale: 1.05 }}
+                whileTap={{ scale: 0.95 }}
+                onClick={() => setSortBy('popularity')}
+                className={`px-6 py-2 rounded-full ${
+                  sortBy === 'popularity'
+                    ? 'bg-[#3498DB] text-white'
+                    : 'bg-white text-gray-600'
+                }`}
+              >
+                Plus populaires
+              </motion.button>
+            </div>
+          </div>
+        </div>
+      </section>
+
       {/* Filtres par catégorie */}
       <div className="container mx-auto px-4 py-8">
         <div className="flex flex-wrap justify-center gap-4 mb-8">
@@ -180,17 +234,21 @@ const Conferences = () => {
                   : 'bg-white text-gray-600 hover:bg-gray-100'
               }`}
             >
-              {cat.icon}
               <span className="ml-2">{cat.label}</span>
             </motion.button>
           ))}
         </div>
 
         {/* Liste des conférences */}
+        <h2 className="text-3xl font-bold text-center mb-12">
+          {sortBy === 'date' ? 'Conférences Récentes' : 'Conférences Populaires'}
+        </h2>
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-          {filteredConferences.slice((currentPage - 1) * conferencesPerPage, currentPage * conferencesPerPage).map((conference) => (
-            <ConferenceCard key={conference.id} conference={conference} />
-          ))}
+          {filteredConferences
+            .slice((currentPage - 1) * conferencesPerPage, currentPage * conferencesPerPage)
+            .map((conference) => (
+              <ConferenceCard key={conference.id} conference={conference} />
+            ))}
         </div>
 
         {/* Pagination */}

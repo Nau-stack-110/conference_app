@@ -30,6 +30,7 @@ const Dashboard = () => {
   const handleLogout = () => {
     localStorage.removeItem('access_token');
     localStorage.removeItem('refresh_token');
+    localStorage.removeItem('isAdmin');
     navigate('/login');
     Swal.fire('Administrateur Deconnecté avec succès', '', 'success');
   };

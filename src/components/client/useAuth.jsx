@@ -16,9 +16,9 @@ const useAuth = () => {
         localStorage.removeItem('refresh_token');
         localStorage.removeItem('isAdmin');
         setIsAuthenticated(false);
-        navigate('/'); 
+        navigate('/');
+        window.location.reload();
 
-        // Affichage du message de déconnexion réussie avec SweetAlert2
         Swal.fire({
             title: 'Déconnexion réussie!',
             text: 'Vous avez été déconnecté avec succès.',

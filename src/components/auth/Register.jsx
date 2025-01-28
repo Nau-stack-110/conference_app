@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { Link, useNavigate } from 'react-router-dom';
 import { registerUser } from './authUser'; 
@@ -13,7 +13,11 @@ const Register = () => {
     password: '',
     password2: ''
   });
-  const [errors, setErrors] = useState({});
+  const [errors, setErrors] = useState({
+    email: '',
+    password: '',
+    confirmPassword: ''
+  });
   const navigate = useNavigate();
 
   const validateForm = () => {
@@ -43,7 +47,6 @@ const Register = () => {
           toast:'true',
           timer:'6000',
           position:'top-right',
-          timerProgressBase:true,
           showConfirmButton:false,
         })
         navigate('/login');
@@ -60,6 +63,30 @@ const Register = () => {
       }
     }
   };
+
+  useEffect(() => {
+    if (formData.email && !/^[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}$/i.test(formData.email)) {
+      setErrors(prev => ({...prev, email: 'Format email invalide'}));
+    } else {
+      setErrors(prev => ({...prev, email: ''}));
+    }
+  }, [formData.email]);
+
+  useEffect(() => {
+    if (formData.password && formData.password.length < 8) {
+      setErrors(prev => ({...prev, password: 'Minimum 8 caractères'}));
+    } else {
+      setErrors(prev => ({...prev, password: ''}));
+    }
+  }, [formData.password]);
+
+  useEffect(() => {
+    if (formData.confirmPassword && formData.password !== formData.confirmPassword) {
+      setErrors(prev => ({...prev, confirmPassword: 'Les mots de passe ne correspondent pas'}));
+    } else {
+      setErrors(prev => ({...prev, confirmPassword: ''}));
+    }
+  }, [formData.confirmPassword, formData.password]);
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-gray-50 py-12 px-4 sm:px-6 lg:px-8">

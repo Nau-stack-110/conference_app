@@ -3,6 +3,8 @@ import { FaPlus, FaEdit, FaTrash, FaEye, FaSearch, FaFilter } from 'react-icons/
 import { motion, AnimatePresence } from 'framer-motion';
 import axios from 'axios';
 import Swal from 'sweetalert2';
+import DatePicker from "react-datepicker";
+import "react-datepicker/dist/react-datepicker.css";
 
 const Conference = () => {
   const [showModal, setShowModal] = useState(false);
@@ -10,6 +12,15 @@ const Conference = () => {
   const [editingConference, setEditingConference] = useState(null);
   const [filterCategory, setFilterCategory] = useState('all');
   const [showFilters, setShowFilters] = useState(false);
+  const [selectedConference, setSelectedConference] = useState(null);
+  const [showSessionModal, setShowSessionModal] = useState(false);
+  const [newSession, setNewSession] = useState({
+    title: '',
+    speaker: '',
+    profession: '',
+    start_time: ''
+  });
+  const [editingSession, setEditingSession] = useState(null);
 
   const categories = ['Technologies', 'Education', 'Business', 'Science', 'Culture', 'Arts', 'Autres'];
 
@@ -48,48 +59,64 @@ const Conference = () => {
   const handleSubmit = async (e) => {
     e.preventDefault();
     const formData = new FormData(e.target);
-    const newConference = {
-      id: editingConference?.id || Date.now(),
-      title: formData.get('title'),
-      date: formData.get('date'),
-      lieu: formData.get('lieu'),
-      price:formData.get('price'),
-      description: formData.get('description'),
-      category: formData.get('category'),
-      sessions: editingConference?.sessions || []
-    };
-
-    if (editingConference) {
+    
+    try {
       const token = localStorage.getItem("access_token");
-      await axios.put(`http://127.0.0.1:8000/api/conferences/${editingConference.id}/update/`,formData, {
-        headers: {
-          Authorization: `Bearer ${token}`,
-        }
-      });
-    setConferences(conferences.map(conf => 
-      conf.id === editingConference.id ? newConference : conf));
+      
+      if (!token) {
+        Swal.fire({
+          title: 'Erreur d\'authentification',
+          text: 'Veuillez vous reconnecter',
+          icon: 'error'
+        });
+        return;
+      }
+
+      if (editingConference) {
+        const response = await axios.put(`http://127.0.0.1:8000/api/conferences/${editingConference.id}/update/`, formData, {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          }
+        });
+        setConferences(conferences.map(conf => 
+          conf.id === editingConference.id ? response.data : conf));
         Swal.fire({
           title: 'Conférences mise à jour avec success',
           icon:'success',
           confirmButtonText: 'OK'
         })
-    } else {
-      const token = localStorage.getItem("access_token");
-      await axios.post("http://127.0.0.1:8000/api/conferences/create/", formData, {
-        headers: {
-          Authorization: `Bearer ${token}`,
-        }
-      });
-      setConferences([...conferences, newConference]);
-      console.log(formData);
+      } else {
+        const response = await axios.post(
+          "http://127.0.0.1:8000/api/conferences/create/", 
+          formData, 
+          {
+            headers: {
+              Authorization: `Bearer ${token}`,
+              'Content-Type': 'multipart/form-data'
+            }
+          }
+        );
+
+        setConferences([...conferences, response.data]);
+        Swal.fire({
+          title: 'Conférence créée avec succès',
+          icon: 'success'
+        });
+      }
+      
+      setShowModal(false);
+      setEditingConference(null);
+
+    } catch (error) {
+      console.error('Erreur:', error.response?.data || error.message);
       Swal.fire({
-        title: 'Conférences crée avec success',
-        icon:'success',
-        confirmButtonText: 'OK'
-      })
+        title: 'Erreur',
+        text: error.response?.data?.date?.[0] ||
+               error.response?.data?.detail || 
+               'Échec de la création de la conférence',
+        icon: 'error'
+      });
     }
-    setShowModal(false);
-    setEditingConference(null);
   };
 
   const handleEdit = (conference) => {
@@ -112,14 +139,161 @@ const Conference = () => {
           icon:'success',
           confirmButtonText: 'OK'
         })
-      } catch (e) {
-        console.error("Erreur lors de la suppression du conference:", e);
+      } catch (error) {
+        console.error("Erreur lors de la suppression du conference:", error);
+        let errorMessage = 'Erreur lors de la suppression du conference';
+        if (error.response && error.response.data) {
+          errorMessage = error.response.data || errorMessage;
+        } 
         Swal.fire({
-          title: e,
+          title: 'Erreur',
           icon:'error',
+          text: errorMessage,
           confirmButtonText: 'OK'
         })
       }
+    }
+  };
+
+  const handleViewDetails = async (id) => {
+    try {
+      const response = await axios.get(`http://127.0.0.1:8000/api/conferences/${id}/`);
+      const conferenceData = response.data;
+      
+      setSelectedConference({
+        ...conferenceData,
+        sessions: conferenceData.sessions.map(session => ({
+          id: session.id,
+          title: session.title,
+          speaker: session.speaker,
+          start_time: session.start_time,
+          profession: session.profession,
+          participants_count: session.participants_count
+        }))
+      });
+
+    } catch (error) {
+      console.error("Erreur lors de la récupération des détails:", error);
+      Swal.fire({
+        title: 'Erreur',
+        text: 'Impossible de charger les détails de la conférence',
+        icon: 'error'
+      });
+    }
+  };
+
+  const handleCreateSession = async (e) => {
+    e.preventDefault();
+    try {
+      const token = localStorage.getItem("access_token");
+      const sessionData = {
+        ...newSession,
+        conference: selectedConference.id,
+        start_time: newSession.start_time.toISOString()
+      };
+
+      const response = await axios.post(
+        "http://127.0.0.1:8000/api/sessions/create/",
+        sessionData,
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+            'Content-Type': 'application/json'
+          }
+        }
+      );
+
+      setSelectedConference(prev => ({
+        ...prev,
+        sessions: [...prev.sessions, response.data]
+      }));
+      
+      setShowSessionModal(false);
+      Swal.fire({
+        title: 'Session créée avec succès!',
+        icon: 'success'
+      });
+      
+    } catch (error) {
+      console.error('Erreur création session:', error.response?.data);
+      Swal.fire({
+        title: 'Erreur',
+        text: error.response?.data?.non_field_errors?.[0] ||
+              Object.values(error.response?.data).flat().join('\n') ||
+              'Échec de la création de la session',
+        icon: 'error'
+      });
+    }
+  };
+
+  const handleDeleteSession = async (sessionId) => {
+    try {
+      const result = await Swal.fire({
+        title: 'Confirmer la suppression?',
+        text: "Cette action est irréversible!",
+        icon: 'warning',
+        showCancelButton: true,
+        confirmButtonColor: '#d33',
+        cancelButtonColor: '#3085d6',
+        confirmButtonText: 'Supprimer'
+      });
+
+      if (result.isConfirmed) {
+        const token = localStorage.getItem("access_token");
+        await axios.delete(
+          `http://localhost:8000/api/sessions/${sessionId}/update/`,
+          { headers: { Authorization: `Bearer ${token}` } }
+        );
+
+        setSelectedConference(prev => ({
+          ...prev,
+          sessions: prev.sessions.filter(s => s.id !== sessionId)
+        }));
+        
+        Swal.fire('Supprimé!', 'La session a été supprimée.', 'success');
+      }
+    } catch (error) {
+      Swal.fire({
+        title: 'Erreur',
+        text: error.response?.data?.detail || 
+              error.response?.data?.non_field_errors?.[0] ||
+              'Échec de la suppression',
+        icon: 'error'
+      });
+    }
+  };
+
+  const handleUpdateSession = async (e) => {
+    e.preventDefault();
+    try {
+      const token = localStorage.getItem("access_token");
+      const response = await axios.put(
+        `http://localhost:8000/api/sessions/${editingSession.id}/update/`,
+        {
+          ...editingSession,
+          start_time: new Date(editingSession.start_time).toISOString()
+        },
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+
+      setSelectedConference(prev => ({
+        ...prev,
+        sessions: prev.sessions.map(s => 
+          s.id === response.data.id ? response.data : s
+        )
+      }));
+      
+      setEditingSession(null);
+      Swal.fire('Modifié!', 'La session a été mise à jour.', 'success');
+      
+    } catch (error) {
+      Swal.fire({
+        title: 'Erreur',
+        text: error.response?.data?.non_field_errors?.[0] ||
+              Object.values(error.response?.data).flat().join('\n') ||
+              'Échec de la modification',
+        icon: 'error'
+      });
     }
   };
 
@@ -225,6 +399,7 @@ const Conference = () => {
                 <motion.button
                   whileHover={{ scale: 1.1 }}
                   whileTap={{ scale: 0.9 }}
+                  onClick={() => handleViewDetails(conference.id)}
                   className="p-2 text-blue-600 hover:bg-blue-50 rounded"
                 >
                   <FaEye />
@@ -300,6 +475,16 @@ const Conference = () => {
                   />
                 </div>
                 <div>
+                  <label className="block text-sm font-medium mb-1">Price</label>
+                  <input
+                    type="text"
+                    name="price"
+                    defaultValue={editingConference?.price}
+                    className="w-full p-2 border rounded-lg"
+                    required
+                  />
+                </div>
+                <div>
                   <label className="block text-sm font-medium mb-1">Description</label>
                   <textarea
                     name="description"
@@ -338,6 +523,249 @@ const Conference = () => {
                     className="px-4 py-2 bg-[#3498DB] text-white rounded-lg"
                   >
                     {editingConference ? 'Modifier' : 'Créer'}
+                  </button>
+                </div>
+              </form>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      <AnimatePresence>
+        {selectedConference && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50"
+          >
+            <motion.div
+              initial={{ scale: 0.9 }}
+              animate={{ scale: 1 }}
+              className="bg-white p-6 rounded-lg w-full max-w-2xl max-h-[90vh] overflow-y-auto"
+            >
+              <h3 className="text-2xl font-bold mb-4">{selectedConference.title}</h3>
+              <p className="text-lg mb-4">Participants totaux : {selectedConference.total_participants}</p>
+              
+              <div className="space-y-4">
+                {selectedConference.sessions.map(session => (
+                  <div key={session.id} className="p-4 border rounded-lg relative">
+                    <div className="absolute top-2 right-2 flex space-x-1">
+                      <motion.button
+                        whileHover={{ scale: 1.1 }}
+                        whileTap={{ scale: 0.9 }}
+                        onClick={() => setEditingSession(session)}
+                        className="p-1 text-blue-600 hover:bg-blue-50 rounded"
+                      >
+                        <FaEdit size={16} />
+                      </motion.button>
+                      <motion.button
+                        whileHover={{ scale: 1.1 }}
+                        whileTap={{ scale: 0.9 }}
+                        onClick={() => handleDeleteSession(session.id)}
+                        className="p-1 text-red-600 hover:bg-red-50 rounded"
+                      >
+                        <FaTrash size={16} />
+                      </motion.button>
+                    </div>
+                    <h4 className="text-xl font-semibold mb-2">{session.title}</h4>
+                    <div className="flex justify-between">
+                      <p className="text-gray-600">
+                        <span className="font-semibold">Intervenant:</span> {session.speaker}
+                      </p>
+                      <p className="text-gray-600">
+                        <span className="font-semibold">Participants:</span> {session.participants_count}
+                      </p>
+                    </div>
+                    <p className="text-gray-600">
+                      <span className="font-semibold">Horaire:</span>{" "}
+                      {new Date(session.start_time).toLocaleDateString('fr-FR', {
+                        day: 'numeric',
+                        month: 'long',
+                        year: 'numeric'
+                      })} à {" "}
+                      {new Date(session.start_time).toLocaleTimeString('fr-FR', {
+                        hour: '2-digit',
+                        minute: '2-digit'
+                      })}
+                    </p>
+                  </div>
+                ))}
+              </div>  
+
+              <div className="mt-4 flex justify-end space-x-3">
+                <button
+                  onClick={() => setShowSessionModal(true)}
+                  className="px-4 py-2 bg-green-600 text-white rounded-lg"
+                >
+                  Nouvelle Session
+                </button>
+                <button
+                  onClick={() => setSelectedConference(null)}
+                  className="px-4 py-2 bg-gray-200 rounded-lg hover:bg-gray-300"
+                >
+                  Fermer
+                </button>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      <AnimatePresence>
+        {showSessionModal && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50"
+          >
+            <motion.div
+              initial={{ scale: 0.9 }}
+              animate={{ scale: 1 }}
+              className="bg-white p-6 rounded-lg w-full max-w-md"
+            >
+              <h3 className="text-xl font-bold mb-4">Nouvelle Session</h3>
+              <form onSubmit={handleCreateSession} className="space-y-4">
+                <div>
+                  <label className="block text-sm font-medium mb-1">Titre</label>
+                  <input
+                    type="text"
+                    required
+                    className="w-full p-2 border rounded-lg"
+                    value={newSession.title}
+                    onChange={e => setNewSession({...newSession, title: e.target.value})}
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium mb-1">Intervenant</label>
+                  <input
+                    type="text"
+                    required
+                    className="w-full p-2 border rounded-lg"
+                    value={newSession.speaker}
+                    onChange={e => setNewSession({...newSession, speaker: e.target.value})}
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium mb-1">Profession</label>
+                  <input
+                    type="text"
+                    required
+                    className="w-full p-2 border rounded-lg"
+                    value={newSession.profession}
+                    onChange={e => setNewSession({...newSession, profession: e.target.value})}
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium mb-1">Date et Heure</label>
+                  <DatePicker
+                    selected={newSession.start_time ? new Date(newSession.start_time) : null}
+                    onChange={(date) => setNewSession({...newSession, start_time: date})}
+                    showTimeSelect
+                    timeFormat="HH:mm"
+                    timeIntervals={15}
+                    dateFormat="dd/MM/yyyy HH:mm"
+                    className="w-full p-2 border rounded-lg"
+                    placeholderText="Sélectionnez date et heure"
+                    minDate={new Date()}
+                    required
+                  />
+                </div>
+                <div className="flex justify-end space-x-3">
+                  <button
+                    type="button"
+                    onClick={() => setShowSessionModal(false)}
+                    className="px-4 py-2 border rounded-lg"
+                  >
+                    Annuler
+                  </button>
+                  <button
+                    type="submit"
+                    className="px-4 py-2 bg-green-600 text-white rounded-lg"
+                  >
+                    Créer
+                  </button>
+                </div>
+              </form>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      <AnimatePresence>
+        {editingSession && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50"
+          >
+            <motion.div
+              initial={{ scale: 0.9 }}
+              animate={{ scale: 1 }}
+              className="bg-white p-6 rounded-lg w-full max-w-md"
+            >
+              <h3 className="text-xl font-bold mb-4">Modifier Session</h3>
+              <form onSubmit={handleUpdateSession} className="space-y-4">
+                <div>
+                  <label className="block text-sm font-medium mb-1">Titre</label>
+                  <input
+                    type="text"
+                    required
+                    className="w-full p-2 border rounded-lg"
+                    value={editingSession.title}
+                    onChange={e => setEditingSession({...editingSession, title: e.target.value})}
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium mb-1">Intervenant</label>
+                  <input
+                    type="text"
+                    required
+                    className="w-full p-2 border rounded-lg"
+                    value={editingSession.speaker}
+                    onChange={e => setEditingSession({...editingSession, speaker: e.target.value})}
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium mb-1">Profession</label>
+                  <input
+                    type="text"
+                    required
+                    className="w-full p-2 border rounded-lg"
+                    value={editingSession.profession}
+                    onChange={e => setEditingSession({...editingSession, profession: e.target.value})}
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium mb-1">Date et Heure</label>
+                  <DatePicker
+                    selected={editingSession.start_time ? new Date(editingSession.start_time) : null}
+                    onChange={(date) => setEditingSession({...editingSession, start_time: date})}
+                    showTimeSelect
+                    timeFormat="HH:mm"
+                    timeIntervals={15}
+                    dateFormat="dd/MM/yyyy HH:mm"
+                    className="w-full p-2 border rounded-lg"
+                    placeholderText="Sélectionnez date et heure"
+                    minDate={new Date()}
+                    required
+                  />
+                </div>
+                <div className="flex justify-end space-x-3">
+                  <button
+                    type="button"
+                    onClick={() => setEditingSession(null)}
+                    className="px-4 py-2 border rounded-lg"
+                  >
+                    Annuler
+                  </button>
+                  <button
+                    type="submit"
+                    className="px-4 py-2 bg-blue-600 text-white rounded-lg"
+                  >
+                    Modifier
                   </button>
                 </div>
               </form>

@@ -1,7 +1,7 @@
 import { useState, useEffect, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
-import { FaComment, FaTimes, FaStar, FaCalendar, FaMapMarkerAlt, FaUsers, FaClock, FaChevronDown, FaChevronUp } from 'react-icons/fa';
+import { FaComment, FaTimes, FaStar, FaCalendar, FaMapMarkerAlt, FaUsers, FaChevronDown, FaChevronUp } from 'react-icons/fa';
 import { Swiper, SwiperSlide } from 'swiper/react';
 import { Navigation, Pagination, Autoplay, EffectFade } from 'swiper/modules';
 import 'swiper/css';
@@ -11,9 +11,11 @@ import 'swiper/css/effect-fade';
 import axios from 'axios';
 import React from 'react';
 import Swal from 'sweetalert2';
+import useAuth from './useAuth';
 
 const Home = () => {
   const navigate = useNavigate();
+  const { isAuthenticated } = useAuth();
   const [showFeedback, setShowFeedback] = useState(false);
   const [rating, setRating] = useState(0);
   const [activeCategory, setActiveCategory] = useState('all');
@@ -102,8 +104,7 @@ const Home = () => {
       let errorMessage = 'Erreur lors de l\'inscription. Veuillez réessayer.';
       if (error.response && error.response.data) {
         errorMessage = error.response.data.error || errorMessage;
-      }
-      
+      } 
       Swal.fire({
         title: 'Erreur!',
         text: errorMessage,
@@ -248,18 +249,26 @@ const Home = () => {
                       <motion.button
                         whileHover={{ scale: 1.05 }}
                         whileTap={{ scale: 0.95 }}
-                        onClick={() => navigate('/login')}
                         className="bg-[#3498DB] text-white px-8 py-3 rounded-lg"
+                        onClick={(e) => {
+                          e.preventDefault();
+                          if (!isAuthenticated) {
+                            Swal.fire({
+                              title: 'Connexion requise',
+                              text: 'Veuillez vous connecter pour vous inscrire',
+                              icon: 'warning',
+                              confirmButtonText: 'Se connecter'
+                            }).then((result) => {
+                              if (result.isConfirmed) {
+                                navigate('/login');
+                              }
+                            });
+                          } else {
+                            handleRegister(conference.id);
+                          }
+                        }}
                       >
-                        Se connecter
-                      </motion.button>
-                      <motion.button
-                        whileHover={{ scale: 1.05 }}
-                        whileTap={{ scale: 0.95 }}
-                        onClick={() => navigate('/register')}
-                        className="bg-white text-[#3498DB] px-8 py-3 rounded-lg"
-                      >
-                        S&apos;inscrire
+                        {isAuthenticated ? "S'inscrire à l'événement" : "Se connecter pour s'inscrire"}
                       </motion.button>
                     </div>
                   </motion.div>
@@ -413,7 +422,6 @@ const Home = () => {
         </div>
       </section>
 
-      {/* Bouton Feedback */}
       <motion.button
         whileHover={{ scale: 1.1 }}
         whileTap={{ scale: 0.9 }}
@@ -423,7 +431,6 @@ const Home = () => {
         <FaComment size={24} />
       </motion.button>
 
-      {/* Modal Feedback */}
       <AnimatePresence>
         {showFeedback && (
           <motion.div
