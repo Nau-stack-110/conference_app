@@ -1,9 +1,32 @@
 import { useState, useEffect } from 'react';
-import { motion } from 'framer-motion';
+import { motion, AnimatePresence } from 'framer-motion';
 import { Link, useNavigate } from 'react-router-dom';
 import { registerUser } from './authUser'; 
 import Swal from 'sweetalert2';
 import { FaUser, FaEnvelope, FaLock, FaEye, FaEyeSlash } from 'react-icons/fa';
+
+const passwordStrengthColors = {
+  0: 'bg-red-500',
+  1: 'bg-orange-500',
+  2: 'bg-yellow-500',
+  3: 'bg-green-500'
+};
+
+const passwordStrengthLabels = {
+  0: 'Très faible',
+  1: 'Faible',
+  2: 'Moyen',
+  3: 'Fort'
+};
+
+const calculatePasswordStrength = (password) => {
+  let strength = 0;
+  if (password.length >= 8) strength++;
+  if (password.match(/[A-Z]/)) strength++;
+  if (password.match(/[0-9]/)) strength++;
+  if (password.match(/[^A-Za-z0-9]/)) strength++;
+  return Math.min(3, Math.floor(strength));
+};
 
 const Register = () => {
   const [showPassword, setShowPassword] = useState(false);
@@ -18,6 +41,7 @@ const Register = () => {
     password: '',
     confirmPassword: ''
   });
+  const [passwordStrength, setPasswordStrength] = useState(0);
   const navigate = useNavigate();
 
   const validateForm = () => {
@@ -88,6 +112,10 @@ const Register = () => {
     }
   }, [formData.confirmPassword, formData.password]);
 
+  useEffect(() => {
+    setPasswordStrength(calculatePasswordStrength(formData.password));
+  }, [formData.password]);
+
   return (
     <div className="min-h-screen flex items-center justify-center bg-gray-50 py-12 px-4 sm:px-6 lg:px-8">
       <motion.div
@@ -117,7 +145,7 @@ const Register = () => {
                 value={formData.username}
                 onChange={(e) => setFormData({ ...formData, username: e.target.value })}
               />
-              {errors.nom && (
+              {errors.username && (
                 <motion.p
                   initial={{ opacity: 0 }}
                   animate={{ opacity: 1 }}
@@ -159,8 +187,38 @@ const Register = () => {
                 } placeholder-gray-500 text-gray-900 focus:outline-none focus:ring-[#3498DB] focus:border-[#3498DB]`}
                 placeholder="Mot de passe"
                 value={formData.password}
-                onChange={(e) => setFormData({ ...formData, password: e.target.value })}
+                onChange={(e) => {
+                  setFormData({ ...formData, password: e.target.value });
+                }}
               />
+              
+              {/* Progress Bar */}
+              <AnimatePresence>
+                {formData.password.length > 0 && (
+                  <motion.div
+                    initial={{ opacity: 0, y: -5 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0, y: -5 }}
+                    className="mt-2 space-y-1"
+                  >
+                    <div className="h-2 bg-gray-200 rounded-full">
+                      <div
+                        className={`h-full rounded-full transition-all duration-500 ${passwordStrengthColors[passwordStrength]}`}
+                        style={{ width: `${(passwordStrength + 1) * 25}%` }}
+                      />
+                    </div>
+                    <motion.span
+                      key={passwordStrength}
+                      initial={{ opacity: 0, x: -5 }}
+                      animate={{ opacity: 1, x: 0 }}
+                      className={`text-sm font-medium ${passwordStrengthColors[passwordStrength].replace('bg', 'text')}`}
+                    >
+                      {passwordStrengthLabels[passwordStrength]}
+                    </motion.span>
+                  </motion.div>
+                )}
+              </AnimatePresence>
+
               <button
                 type="button"
                 onClick={() => setShowPassword(!showPassword)}
@@ -197,6 +255,7 @@ const Register = () => {
               whileTap={{ scale: 0.98 }}
               type="submit"
               className="group relative w-full flex justify-center py-2 px-4 border border-transparent text-sm font-medium rounded-md text-white bg-[#3498DB] hover:bg-[#2980B9] focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-[#3498DB]"
+              disabled={Object.values(errors).some(error => error)}
             >
               S&apos;inscrire
             </motion.button>

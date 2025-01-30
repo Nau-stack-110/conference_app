@@ -1,9 +1,10 @@
 import { useState, useEffect } from 'react';
-import { FaSearch, FaFilter, FaUserPlus, FaEdit, FaTrash, FaDownload } from 'react-icons/fa';
+import { FaSearch, FaFilter, FaUserPlus, FaDownload, FaPlus } from 'react-icons/fa';
 import { motion, AnimatePresence } from 'framer-motion';
 import jsPDF from 'jspdf';
 import 'jspdf-autotable';
 import axios from 'axios';
+import Swal from 'sweetalert2';
 
 const categorie = ['Technologies', 'Education', 'Business', 'Science', 'Cultures', 'Arts', 'Autres'];
 
@@ -16,6 +17,14 @@ const Participants = () => {
   const [currentPage, setCurrentPage] = useState();
   const itemsPerPage = 5;
   const [participants, setParticipants] = useState([]);
+  const [showAddModal, setShowAddModal] = useState(false);
+  const [newParticipant, setNewParticipant] = useState({
+    user_id: '',
+    conference_id: ''
+  });
+  const [users, setUsers] = useState([]);
+  const [conferences, setConferences] = useState([]);
+  const [loadingData, setLoadingData] = useState(true);
 
   const getParticipants = async () =>{
     try {
@@ -86,17 +95,6 @@ const Participants = () => {
     }
     setShowModal(false);
     setEditingParticipant(null);
-  };
-
-  const handleEdit = (participant) => {
-    setEditingParticipant(participant);
-    setShowModal(true);
-  };
-
-  const handleDelete = (id) => {
-    if (window.confirm('Êtes-vous sûr de vouloir supprimer ce participant ?')) {
-      setParticipants(participants.filter(p => p.id !== id));
-    }
   };
 
   const exportToPDF = () => {
@@ -176,6 +174,48 @@ const Participants = () => {
            '';
   };
 
+  const handleAddParticipant = async (e) => {
+    e.preventDefault();
+    try {
+      const token = localStorage.getItem('access_token');
+      await axios.post('http://127.0.0.1:8000/api/admin/add-participant/', newParticipant, {
+        headers: {
+          Authorization: `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        }
+      });
+      Swal.fire('Succès', 'Participant ajouté avec succès', 'success');
+      setShowAddModal(false);
+      getParticipants(); 
+    } catch (error) {
+      Swal.fire('Erreur', error.response?.data?.detail || 'Erreur lors de l\'ajout', 'error');
+    }
+  };
+
+  useEffect(() => {
+    const fetchData = async () => {
+      try {
+        const token = localStorage.getItem('access_token');
+        const [usersRes, conferencesRes] = await Promise.all([
+          axios.get('http://127.0.0.1:8000/api/user-profile/', {
+            headers: { Authorization: `Bearer ${token}` }
+          }),
+          axios.get('http://127.0.0.1:8000/api/conferences/', {
+            headers: { Authorization: `Bearer ${token}` }
+          })
+        ]);
+        
+        setUsers(usersRes.data);
+        setConferences(conferencesRes.data);
+      } catch (error) {
+        Swal.fire('Erreur', 'Impossible de charger les données', 'error');
+      } finally {
+        setLoadingData(false);
+      }
+    };
+    fetchData();
+  }, []);
+
   return (
     <div className="space-y-6">
       <div className="flex justify-between items-center">
@@ -183,13 +223,10 @@ const Participants = () => {
         <motion.button
           whileHover={{ scale: 1.05 }}
           whileTap={{ scale: 0.95 }}
-          onClick={() => {
-            setEditingParticipant(null);
-            setShowModal(true);
-          }}
-          className="bg-[#3498DB] text-white px-4 py-2 rounded-lg flex items-center"
+          onClick={() => setShowAddModal(true)}
+          className="bg-green-500 text-white px-4 py-2 rounded-lg flex items-center"
         >
-          <FaUserPlus className="mr-2" />
+          <FaPlus className="mr-2" />
           Ajouter un participant
         </motion.button>
       </div>
@@ -259,7 +296,6 @@ const Participants = () => {
               <th className="px-6 py-3 text-left">Email</th>
               <th className="px-6 py-3 text-left">Conférence</th>
               <th className="px-6 py-3 text-left">Date</th>
-              <th className="px-6 py-3 text-left">Actions</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-gray-200">
@@ -279,24 +315,6 @@ const Participants = () => {
                   <span className={`px-2 py-1 rounded-full text-sm ${getCategoryColor(participant.session.conference.category)}`} >
                     {participant.session.conference.date}
                   </span>
-                </td>
-                <td className="px-6 py-4">
-                  <motion.button
-                    whileHover={{ scale: 1.1 }}
-                    whileTap={{ scale: 0.9 }}
-                    onClick={() => handleEdit(participant)}
-                    className="text-blue-600 hover:text-blue-800 mr-3"
-                  >
-                    <FaEdit />
-                  </motion.button>
-                  <motion.button
-                    whileHover={{ scale: 1.1 }}
-                    whileTap={{ scale: 0.9 }}
-                    onClick={() => handleDelete(participant.id)}
-                    className="text-red-600 hover:text-red-800"
-                  >
-                    <FaTrash />
-                  </motion.button>
                 </td>
               </motion.tr>
             ))}
@@ -398,6 +416,64 @@ const Participants = () => {
           </motion.div>
         )}
       </AnimatePresence>
+
+      {showAddModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4">
+          <div className="bg-white rounded-lg p-6 w-full max-w-md">
+            <h3 className="text-xl font-bold mb-4">Ajouter un participant</h3>
+            <form onSubmit={handleAddParticipant} className="space-y-4">
+              <div>
+                <label className="block mb-2">Utilisateur</label>
+                <select
+                  required
+                  className="w-full p-2 border rounded bg-white"
+                  value={newParticipant.user_id}
+                  onChange={(e) => setNewParticipant({...newParticipant, user_id: e.target.value})}
+                >
+                  <option value="">Sélectionner un utilisateur</option>
+                  {users.map(user => (
+                    <option key={user.id} value={user.id}>
+                      {user.username} ({user.email})
+                    </option>
+                  ))}
+                </select>
+              </div>
+              <div>
+                <label className="block mb-2">Conférence</label>
+                <select
+                  required
+                  className="w-full p-2 border rounded bg-white"
+                  value={newParticipant.conference_id}
+                  onChange={(e) => setNewParticipant({...newParticipant, conference_id: e.target.value})}
+                >
+                  <option value="">Sélectionner une conférence</option>
+                  {conferences.map(conference => (
+                    <option key={conference.id} value={conference.id}>
+                      {conference.title} ({new Date(conference.date).toLocaleDateString('fr-FR')})
+                    </option>
+                  ))}
+                </select>
+              </div>
+              <div className="flex justify-end gap-2">
+                <button
+                  type="button"
+                  onClick={() => setShowAddModal(false)}
+                  className="px-4 py-2 text-gray-600 hover:bg-gray-100 rounded"
+                >
+                  Annuler
+                </button>
+                <button
+                  type="submit"
+                  className="px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600 disabled:opacity-50"
+                  disabled={loadingData}
+                >
+                  {loadingData ? 'Chargement...' : 'Confirmer'}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
 
       <motion.button
         whileHover={{ scale: 1.05 }}

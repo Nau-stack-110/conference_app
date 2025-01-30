@@ -21,6 +21,7 @@ const Conference = () => {
     start_time: ''
   });
   const [editingSession, setEditingSession] = useState(null);
+  const [imagePreview, setImagePreview] = useState(null);
 
   const categories = ['Technologies', 'Education', 'Business', 'Science', 'Culture', 'Arts', 'Autres'];
 
@@ -58,8 +59,17 @@ const Conference = () => {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    const formData = new FormData(e.target);
-    
+    const formData = new FormData();
+    const imageFile = e.target.image?.files[0];
+
+    formData.append('title', e.target.title.value);
+    formData.append('date', e.target.date.value);
+    formData.append('lieu', e.target.lieu.value);
+    formData.append('price', e.target.price.value);
+    formData.append('description', e.target.description.value);
+    formData.append('category', e.target.category.value);
+    if (imageFile) formData.append('image', imageFile);
+
     try {
       const token = localStorage.getItem("access_token");
       
@@ -121,6 +131,7 @@ const Conference = () => {
 
   const handleEdit = (conference) => {
     setEditingConference(conference);
+    setImagePreview(conference.image || null);
     setShowModal(true);
   };
 
@@ -444,8 +455,9 @@ const Conference = () => {
                 {editingConference ? 'Modifier la conférence' : 'Nouvelle Conférence'}
               </h3>
               <form onSubmit={handleSubmit} className="space-y-4">
+                <div className='flex flex-wrap justify-between gap-1'>
                 <div>
-                  <label className="block text-sm font-medium mb-1">Titre</label>
+                  <label className="flex text-sm font-medium mb-1">Titre</label>
                   <input
                     type="text"
                     name="title"
@@ -464,8 +476,10 @@ const Conference = () => {
                     required
                   />
                 </div>
-                <div>
-                  <label className="block text-sm font-medium mb-1">Lieu</label>
+                </div>
+                <div className='flex gap-1 mb-1 justify-between'>
+                  <div>
+                  <label className="flex text-sm font-medium mb-1">Lieu</label>
                   <input
                     type="text"
                     name="lieu"
@@ -473,8 +487,8 @@ const Conference = () => {
                     className="w-full p-2 border rounded-lg"
                     required
                   />
-                </div>
-                <div>
+                  </div>
+                  <div>
                   <label className="block text-sm font-medium mb-1">Price</label>
                   <input
                     type="text"
@@ -483,9 +497,10 @@ const Conference = () => {
                     className="w-full p-2 border rounded-lg"
                     required
                   />
+                  </div>
                 </div>
                 <div>
-                  <label className="block text-sm font-medium mb-1">Description</label>
+                  <label className="flex text-sm font-medium mb-1">Description</label>
                   <textarea
                     name="description"
                     defaultValue={editingConference?.description}
@@ -506,6 +521,29 @@ const Conference = () => {
                       <option key={cat} value={cat}>{cat}</option>
                     ))}
                   </select>
+                </div>
+                <div>
+                  <label className="block text-sm font-medium mb-1">Image</label>
+                  <div className="mt-1 flex flex-col items-center">
+                    <input
+                      type="file"
+                      name="image"
+                      accept="image/*"
+                      className="block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded file:border-0 file:text-sm file:font-semibold file:bg-[#3498DB] file:text-white hover:file:bg-[#2980B9]"
+                      onChange={(e) => {
+                        if (e.target.files[0]) {
+                          setImagePreview(URL.createObjectURL(e.target.files[0]));
+                        }
+                      }}
+                    />
+                    {imagePreview || editingConference?.image ? (
+                      <img 
+                        src={imagePreview || editingConference.image} 
+                        alt="Preview" 
+                        className="mt-2 h-32 w-32 object-cover rounded-lg"
+                      />
+                    ) : null}
+                  </div>
                 </div>
                 <div className="flex justify-end space-x-3">
                   <button

@@ -4,7 +4,7 @@ import Profile from './components/admin/Profile';
 import Conferences from './components/admin/Conference';
 import Participants from './components/admin/Participants';
 import Statistiques from './components/admin/Statistique';
-import Organisateur from './components/admin/Organisateur';
+import Utilisateurs from './components/admin/Utilisateurs';
 
 import Home from './components/client/Home';
 import Login from './components/auth/Login';
@@ -16,6 +16,7 @@ import Contact from './components/client/Contact';
 import Footer from './components/client/Footer';
 import PrivateRoute from './components/privatedRoute';
 import AdminRoute from './components/adminRoute';
+import MyTickets from './components/client/MyTickets';
 
 const App = () => {
   return (
@@ -50,13 +51,20 @@ const App = () => {
             <Footer />
           </>
         } />
+        <Route path="/my-tickets" element={
+          <>
+            <Header />
+            <MyTickets />
+            <Footer />
+          </>
+        } />
 
         <Route path="/admin" element={<PrivateRoute> <AdminRoute> <Dashboard /> </AdminRoute> </PrivateRoute>}>
           <Route index element={<Profile />} />
           <Route path="conferences" element={<Conferences />} />
           <Route path="participants" element={<Participants />} />
           <Route path="statistiques" element={<Statistiques />} />
-          <Route path="organisateurs" element={<Organisateur />} />
+          <Route path="utilisateurs" element={<Utilisateurs />} />
           <Route path="*" element={<Navigate to="/admin" replace />} />
         </Route>
       </Routes>

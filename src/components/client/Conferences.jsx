@@ -5,11 +5,13 @@ import PropTypes from 'prop-types';
 import axios from 'axios';
 import { formatDate, formatTime } from './utils';
 import { useNavigate } from 'react-router-dom';
+import Swal from 'sweetalert2';
+import useAuth from './useAuth';
 
-const ConferenceCard = ({ conference }) => {
+const ConferenceCard = ({ conference, onRegister }) => {
   const [showDetails, setShowDetails] = useState(false);
   const navigate = useNavigate()
-  return (
+  return ( 
     <motion.div
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
@@ -76,7 +78,26 @@ const ConferenceCard = ({ conference }) => {
           onClick={() => {
             const token = localStorage.getItem('access_token');
             if (!token) {
-              navigate('/login');
+              Swal.fire({
+                title: 'Connexion requise',
+                html: `<div class="text-center">
+                        <p class="mb-4">Vous devez être connecté pour vous inscrire à cette conférence</p>
+                        <div class="flex justify-center gap-4">
+                          <a href="/login" class="bg-[#3498DB] text-white px-6 py-2 rounded-lg hover:bg-[#2980B9] transition-colors">
+                            Se connecter
+                          </a>
+                          <a href="/register" class="bg-[#2C3E50] text-white px-6 py-2 rounded-lg hover:bg-[#1A2A3B] transition-colors">
+                            S'inscrire
+                          </a>
+                        </div>
+                      </div>`,
+                showConfirmButton: false,
+                showCloseButton: true,
+                customClass: {
+                  popup: 'rounded-2xl',
+                  closeButton: 'hover:text-red-500'
+                }
+              });
             } else {
               onRegister(conference.id);
             }
@@ -104,13 +125,18 @@ ConferenceCard.propTypes = {
 };
 
 const Conferences = () => {
+  const { isAuthenticated } = useAuth();
+  const navigate = useNavigate();
   const [searchTerm, setSearchTerm] = useState('');
   const [activeCategory, setActiveCategory] = useState('all');
   const [currentPage, setCurrentPage] = useState(1);
   const [conferences, setConferences] = useState([]);
   const [filteredConferences, setFilteredConferences] = useState([]);
   const [sortBy, setSortBy] = useState('date');
+  const [startDate, setStartDate] = useState('');
+  const [endDate, setEndDate] = useState('');
   const conferencesPerPage = 9;
+  const [isLoading, setIsLoading] = useState(true);
 
   const categories = [
     { id: 'all', label: 'Toutes' },
@@ -124,17 +150,19 @@ const Conferences = () => {
   ];
 
   useEffect(() => {
-    const fetchConferences = async () => {
+    const fetchData = async () => {
       try {
+        setIsLoading(true);
         const response = await axios.get('http://127.0.0.1:8000/api/conferences/');
         setConferences(response.data);
         setFilteredConferences(response.data);
       } catch (error) {
-        console.error('Erreur lors de la récupération des conférences:', error);
+        console.error("Erreur de chargement:", error);
+      } finally {
+        setIsLoading(false);
       }
     };
-
-    fetchConferences();
+    fetchData();
   }, []);
 
   const sortConferences = (conferences, type) => {
@@ -163,6 +191,128 @@ const Conferences = () => {
     setCurrentPage(1); // Reset à la première page après filtrage
   }, [searchTerm, activeCategory, conferences, sortBy]);
 
+  const handleRegister = async (conferenceId) => {
+    try {
+      const token = localStorage.getItem('access_token');
+      await axios.post(
+        'http://127.0.0.1:8000/api/register-conference/',
+        { conference_id: conferenceId },
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        }
+      );
+
+      // Mettre à jour l'état des conférences
+      setConferences(prev => prev.map(conf => 
+        conf.id === conferenceId 
+          ? { ...conf, total_participants: conf.total_participants + 1 }
+          : conf
+      ));
+
+      Swal.fire({
+        title: 'Inscription réussie!',
+        text: 'Votre ticket est disponible dans "Mes Tickets"',
+        icon: 'success',
+        confirmButtonText: 'Voir mon ticket'
+      }).then((result) => {
+        if (result.isConfirmed) {
+          navigate('/my-tickets');
+        }
+      });
+
+    } catch (error) {
+      console.error('Erreur lors de l\'inscription:', error);
+      let errorMessage = 'Erreur lors de l\'inscription. Veuillez réessayer.';
+      
+      if (error.response?.data?.error) {
+        errorMessage = error.response.data.error;
+      }
+
+      Swal.fire({
+        title: 'Erreur!',
+        text: errorMessage,
+        icon: 'error',
+        confirmButtonText: 'OK'
+      });
+    }
+  };
+
+  // Nouvelle fonction de recherche par date
+  const searchByDateRange = async () => {
+    try {
+      if (!startDate || !endDate) {
+        Swal.fire('Erreur', 'Veuillez sélectionner les deux dates', 'error');
+        return;
+      }
+
+      const response = await axios.get(
+        'http://127.0.0.1:8000/api/conferences/date-range/',
+        {
+          params: {
+            start_date: startDate,
+            end_date: endDate
+          }
+        }
+      );
+
+      setConferences(response.data);
+      setFilteredConferences(response.data);
+      
+    } catch (error) {
+      let errorMessage = 'Erreur lors de la recherche';
+      
+      // Récupération des erreurs du backend
+      if (error.response?.data) {
+        if (error.response.data.detail) {
+          errorMessage = error.response.data.detail;
+        } else if (error.response.data.non_field_errors) {
+          errorMessage = error.response.data.non_field_errors.join(', ');
+        }
+      }
+
+      Swal.fire({
+        title: 'Erreur',
+        text: errorMessage,
+        icon: 'error',
+        confirmButtonText: 'OK',
+        customClass: {
+          popup: 'rounded-2xl'
+        }
+      });
+    }
+  };
+
+  // Nouveau composant LoadingSpinner
+  const LoadingSpinner = () => (
+    <motion.div 
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      className="flex justify-center items-center min-h-[300px]"
+    >
+      <svg 
+        className="animate-spin h-12 w-12 text-[#3498DB]" 
+        viewBox="0 0 24 24"
+      >
+        <circle
+          className="opacity-25"
+          cx="12"
+          cy="12"
+          r="10"
+          stroke="currentColor"
+          strokeWidth="4"
+          fill="none"
+        />
+        <path
+          className="opacity-75"
+          fill="currentColor"
+          d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+        />
+      </svg>
+    </motion.div>
+  );
+
   return (
     <div className="min-h-screen pt-20 bg-gray-50">
       {/* En-tête de recherche */}
@@ -181,6 +331,49 @@ const Conferences = () => {
                 onChange={(e) => setSearchTerm(e.target.value)}
               />
             </div>
+          </div>
+
+          <div className="max-w-2xl mx-auto mt-6 flex gap-4">
+            <div className="flex-1 flex items-center bg-white rounded-lg px-4 py-2">
+              <input
+                type="date"
+                className="w-full bg-transparent"
+                value={startDate}
+                onChange={(e) => setStartDate(e.target.value)}
+              />
+            </div>
+            <div className="flex-1 flex items-center bg-white rounded-lg px-4 py-2">
+              <input
+                type="date"
+                className="w-full bg-transparent"
+                value={endDate}
+                onChange={(e) => setEndDate(e.target.value)}
+              />
+            </div>
+            <motion.button
+              whileHover={{ scale: 1.05 }}
+              whileTap={{ scale: 0.95 }}
+              onClick={searchByDateRange}
+              className="bg-white text-[#3498DB] px-6 py-2 rounded-lg hover:bg-opacity-90"
+            >
+              Rechercher
+            </motion.button>
+            <motion.button
+              whileHover={{ scale: 1.05 }}
+              whileTap={{ scale: 0.95 }}
+              onClick={() => {
+                setStartDate('');
+                setEndDate('');
+                axios.get('http://127.0.0.1:8000/api/conferences/')
+                  .then(res => {
+                    setConferences(res.data);
+                    setFilteredConferences(res.data);
+                  });
+              }}
+              className="bg-gray-200 text-gray-700 px-6 py-2 rounded-lg hover:bg-gray-300"
+            >
+              Réinitialiser
+            </motion.button>
           </div>
         </div>
       </div>
@@ -243,12 +436,22 @@ const Conferences = () => {
         <h2 className="text-3xl font-bold text-center mb-12">
           {sortBy === 'date' ? 'Conférences Récentes' : 'Conférences Populaires'}
         </h2>
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-          {filteredConferences
-            .slice((currentPage - 1) * conferencesPerPage, currentPage * conferencesPerPage)
-            .map((conference) => (
-              <ConferenceCard key={conference.id} conference={conference} />
-            ))}
+        <div className={`grid gap-6 md:grid-cols-2 lg:grid-cols-3 ${isLoading ? 'loading-blur' : ''}`}>
+          <AnimatePresence>
+            {isLoading ? (
+              <LoadingSpinner />
+            ) : (
+              filteredConferences
+                .slice((currentPage - 1) * conferencesPerPage, currentPage * conferencesPerPage)
+                .map((conference) => (
+                  <ConferenceCard 
+                    key={conference.id}
+                    conference={conference}
+                    onRegister={handleRegister}
+                  />
+                ))
+            )}
+          </AnimatePresence>
         </div>
 
         {/* Pagination */}

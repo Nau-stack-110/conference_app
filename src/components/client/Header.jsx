@@ -47,7 +47,7 @@ const Header = () => {
         <div className="container mx-auto px-4">
           <div className="flex items-center justify-between h-20">
             <Link to="/" className={`text-2xl font-bold ${isScrolled ? 'text-white' : 'text-[#2C3E50]'}`}>
-              <span className="bg-[#3498DB] text-white px-2 py-1 rounded">Conf</span>érence4Tous
+              <span className="bg-[#3498DB] text-white px-2 py-1 rounded">Conf</span>4Tous
             </Link>
 
             {/* Navigation Desktop */}

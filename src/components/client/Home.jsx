@@ -72,6 +72,29 @@ const Home = () => {
 
   const handleRegister = async (conferenceId) => {
     try {
+      if (!isAuthenticated) {
+        await Swal.fire({
+          title: 'Connexion requise',
+          text: 'Veuillez vous connecter ou vous inscrire pour participer à la conférence',
+          icon: 'warning',
+          showCancelButton: true,
+          confirmButtonText: 'Se connecter',
+          cancelButtonText: 'S\'inscrire',
+          reverseButtons: true,
+          showCloseButton: true,
+          customClass: {
+            closeButton: 'text-gray-500 hover:text-gray-700'
+          }
+        }).then((result) => {
+          if (result.isConfirmed) {
+            navigate('/login');
+          } else if (result.dismiss === Swal.DismissReason.cancel) {
+            navigate('/register');
+          }
+        });
+        return;
+      }
+
       const token = localStorage.getItem('access_token');
       const response = await axios.post('http://127.0.0.1:8000/api/register-conference/', {
         conference_id: conferenceId,
@@ -83,9 +106,13 @@ const Home = () => {
       
       Swal.fire({
         title: 'Inscription réussie!',
-        text: `Votre ticket est disponible ici: ${response.data.ticket_url}`,
+        text: 'Votre ticket est disponible dans "Mes Tickets"',
         icon: 'success',
-        confirmButtonText: 'OK'
+        confirmButtonText: 'Voir mon ticket'
+      }).then((result) => {
+        if (result.isConfirmed) {
+          navigate('/my-tickets');
+        }
       });
 
       setTotalParticipants(prev => prev + 1);
@@ -257,12 +284,22 @@ const Home = () => {
                               title: 'Connexion requise',
                               text: 'Veuillez vous connecter pour vous inscrire',
                               icon: 'warning',
-                              confirmButtonText: 'Se connecter'
+                              showCancelButton: true,
+                              confirmButtonText: 'Se connecter',
+                              cancelButtonText: 'S\'inscrire',
+                              reverseButtons: true,
+                              showCloseButton: true,
+                              customClass: {
+                                closeButton: 'text-gray-500 hover:text-gray-700'
+                              }
                             }).then((result) => {
                               if (result.isConfirmed) {
                                 navigate('/login');
+                              } else if (result.dismiss === Swal.DismissReason.cancel) {
+                                navigate('/register');
                               }
                             });
+                            return;
                           } else {
                             handleRegister(conference.id);
                           }
@@ -393,7 +430,7 @@ const Home = () => {
             </div>
             <div>
               <h3 className="text-4xl font-bold mb-2">15+</h3>
-              <p>Pays</p>
+              <p>Régions</p>
             </div>
           </div>
         </div>
@@ -503,18 +540,6 @@ const Home = () => {
           </motion.div>
         )}
       </AnimatePresence>
-
-      {/* Afficher le QR code après l'inscription */}
-      {qrcodeUrl && (
-        <div className="mt-4 text-center">
-          <h3 className="text-lg font-bold">Votre QR Code :</h3>
-          <img src={qrcodeUrl} alt="QR Code" className="mx-auto my-2" />
-          <a href={qrcodeUrl} download className="mt-2 inline-block bg-[#3498DB] text-white px-4 py-2 rounded-lg">
-            Télécharger le QR Code
-          </a>
-          <p className="mt-2">Total des participants : {totalParticipants}</p>
-        </div>
-      )}
 
     </div>
   );

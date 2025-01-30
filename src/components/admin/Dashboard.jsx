@@ -24,7 +24,7 @@ const Dashboard = () => {
     { path: '/admin/conferences', icon: <FaCalendarAlt />, label: 'Conférences' },
     { path: '/admin/participants', icon: <FaUsers />, label: 'Participants' },
     { path: '/admin/statistiques', icon: <FaChartBar />, label: 'Statistiques' },
-    { path: '/admin/organisateurs', icon: <FaUserTie />, label: 'Organisateurs' },
+    { path: '/admin/utilisateurs', icon: <FaUserTie />, label: 'Utilisateurs' },
   ];
 
   const handleLogout = () => {

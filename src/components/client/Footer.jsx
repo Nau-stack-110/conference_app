@@ -46,9 +46,9 @@ const Footer = () => {
           <div>
             <h3 className="text-xl font-bold mb-4">Contact</h3>
             <ul className="space-y-2 text-gray-300">
-              <li>Analakely, Antananarivo</li>
-              <li>+261 34 00 000 00</li>
-              <li>contact@conference4tous.mg</li>
+              <li>Gara, Antsirabe</li>
+              <li>+261 38 55 532 76</li>
+              <li>zah@conf4tous.mg</li>
             </ul>
           </div>
 
@@ -71,7 +71,7 @@ const Footer = () => {
 
         <div className="border-t border-gray-700 mt-8 pt-8 text-center text-gray-300">
           <p>
-            © {new Date().getFullYear()} Conference4Tous. Fait avec{' '}
+            © {new Date().getFullYear()} Conf4Tous. Fait avec{' '}
             <FaHeart className="inline-block text-red-500" /> à Madagascar
           </p>
         </div>
