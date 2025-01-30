@@ -1,6 +1,6 @@
 # Conf4Tous - Plateforme de Gestion de Conférences
 
-Plateforme complète de gestion de conférences avec système de réservation de tickets et gestion des participants.
+Plateforme de gestion de conférences avec système de réservation de tickets et gestion des participants.
 
 ## ✨ Fonctionnalités
 
@@ -25,16 +25,21 @@ Plateforme complète de gestion de conférences avec système de réservation de
 ### Backend (Django REST)
 ![Django](https://img.shields.io/badge/Django-092E20?logo=django&logoColor=white)
 ![DRF](https://img.shields.io/badge/DRF-ff1709?logo=django&logoColor=white)
+![SQLite](https://img.shields.io/badge/SQLite-07405E?logo=sqlite&logoColor=white)
+![Postman](https://img.shields.io/badge/Postman-FF6C37?logo=postman&logoColor=white)
+
+**Dépendances principales**  
+django-cors-headers | Pillow | djangorestframework-simplejwt
 
 ### Frontend (React)
 ![React](https://img.shields.io/badge/React-61DAFB?logo=react&logoColor=black)
+![Vite](https://img.shields.io/badge/Vite-B73BFE?logo=vite&logoColor=white)
+![Tailwind CSS](https://img.shields.io/badge/Tailwind_CSS-38B2AC?logo=tailwind-css&logoColor=white)
 
-## 🔒 Sécurité
-- Authentification JWT avec refresh tokens
-- CORS strictement configuré
-- Validation des données côté serveur
-- Gestion des permissions RBAC
+**Dépendances principales**  
+framer-motion | react-router-dom | axios | jspdf
 
+## 📡 API Endpoints
 
 ### Authentification
 | Méthode | Endpoint | Description |
@@ -84,8 +89,15 @@ python manage.py runserver
 ```bash
 cd frontend
 npm install
-npm start
+npm run dev
 ```
+
+## 🔒 Sécurité
+- Authentification JWT avec refresh tokens
+- CORS strictement configuré
+- Validation des données côté serveur
+- Gestion des permissions RBAC
+
 
 **Conf4Tous** © 2025 - Développé avec ❤️ par Nau-stack-110
 
